@@ -92,10 +92,9 @@ async function bootstrap() {
 
   // Swagger setup
   const config = new DocumentBuilder()
-    .setTitle('E-Learning Platform API')
+    .setTitle('EVO-TRANSPORT')
     .setDescription('API documentation for the E-Learning Platform')
     .setVersion('1.0')
-    .addTag('app', 'Application endpoints')
     .addBearerAuth(
       {
         type: 'http',

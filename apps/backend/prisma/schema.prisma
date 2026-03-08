@@ -13,11 +13,133 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+
+enum UserRole {
+  PASSENGER
+  DRIVER
+  ADMIN
+}
+
+enum AccountStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+  PENDING_VERIFICATION
+}
+
+enum Language {
+  EN 
+  FR 
+  RW 
+  SW 
+}
+
+enum Currency {
+  USD
+  EUR
+  RWF
+  GBP
+}
+
+enum LocationType {
+  HOME
+  WORK
+  AIRPORT
+  HOTEL
+  OTHER
+}
+
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  fullName  String
-  password  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String          @id @default(cuid())
+  email           String          @unique
+  passwordHash    String?        
+  firstName       String?
+  lastName        String?
+  profilePicture  String?
+  
+  // Account Status
+  role            UserRole        @default(PASSENGER)
+  status          AccountStatus   @default(ACTIVE)
+  isGuest         Boolean         @default(false)
+  isEmailVerified Boolean         @default(false)
+  lastLoginAt     DateTime?
+  
+  // Guest Session Tracking
+  guestSessionId  String?         @unique
+  guestExpiresAt  DateTime?
+  
+  // Email Verification & Password Reset
+  emailVerificationToken String?
+  passwordResetToken String?
+  passwordResetExpires DateTime?
+  
+  // Preferences
+  preferredLanguage Language      @default(EN)
+  preferredCurrency Currency      @default(USD)
+  
+  // Timestamps
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  // Relations - Commented out until we create these models
+  // bookings         Booking[]
+   savedLocations   SavedLocation[]
+   auditLogs        AuditLog[] 
+  
+  // Indexes
+  @@index([email])
+  @@index([guestSessionId])
+  @@index([role])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model SavedLocation {
+  id              String          @id @default(cuid())
+  userId          String
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  name            String         
+  type            LocationType    @default(OTHER)
+  address         String
+  latitude        Float?
+  longitude       Float?
+  isDefault       Boolean         @default(false)
+  
+  // For airport locations
+  airportCode     String?         
+  terminal        String?
+  
+  // Timestamps
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@index([type])
+  @@index([airportCode])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  action     String   
+  method     String   
+  url        String
+  body       Json?   
+  status     String   
+  error      String?  
+  ipAddress  String?
+  userAgent  String?
+  responseTime Int    
+  
+  createdAt  DateTime @default(now())
+  
+  @@index([userId])
+  @@index([createdAt])
+  @@index([action])
+  @@index([method])
+  @@index([status])
 }

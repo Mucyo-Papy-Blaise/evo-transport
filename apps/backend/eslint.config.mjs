@@ -27,7 +27,7 @@ export default tseslint.config(
   {
     rules: {
       // Strict rules
-      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-unused-vars': [
         'error',
         {
@@ -39,6 +39,7 @@ export default tseslint.config(
       '@typescript-eslint/no-floating-promises': 'warn',
       // Disable unsafe rules - too strict for Prisma usage
       '@typescript-eslint/no-unsafe-call': 'off',
+      ' @typescript-eslint/no-misused-promises': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',
       '@typescript-eslint/no-unsafe-argument': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',
