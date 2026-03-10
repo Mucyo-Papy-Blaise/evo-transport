@@ -358,4 +358,9 @@ export class AuthService {
     });
     return !!user;
   }
+
+  logout(userId: string) {
+    this.logger.log(`User logged out: ${userId}`);
+    return ResponseUtil.success({}, 'Logged out successfully');
+  }
 }

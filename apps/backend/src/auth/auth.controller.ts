@@ -23,7 +23,6 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import {
   LoginResponse,
-  UserResponse,
   ChangePasswordResponse,
   UpdateProfileResponse,
 } from '../types/auth.types';
@@ -73,7 +72,6 @@ export class AuthController {
     @CurrentUser('id') userId: string,
     @Body() dto: UpdateProfileDto,
   ): Promise<UpdateProfileResponse> {
-
     if (!userId) {
       throw new UnauthorizedException('User ID not found in token');
     }
@@ -130,5 +128,21 @@ export class AuthController {
       dto.currentPassword,
       dto.newPassword,
     );
+  }
+
+  @Post('logout')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Logout user',
+    description: 'Invalidate the current session',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Logged out successfully',
+  })
+  logout(@CurrentUser('sub') userId: string) {
+    return this.authService.logout(userId);
   }
 }

@@ -28,7 +28,7 @@ import { TemplateService } from './templates/template.service';
         },
         defaults: {
           from: {
-            name: configService.get<string>('MAIL_FROM_NAME', 'EIG CAPITALSUITE'),
+            name: configService.get<string>('MAIL_FROM_NAME', 'EVO TRANSPORT'),
             address: configService.get<string>(
               'MAIL_FROM_ADDRESS',
               'noreply@elearning.com',

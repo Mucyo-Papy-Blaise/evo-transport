@@ -6,6 +6,8 @@ import { AuthModule } from './auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { configValidationSchema } from './config/env.schema';
+import { BookingModule } from './bookings/booking.module';
+import { NotificationModule } from './notifications/notification.module';
 
 @Module({
   imports: [
@@ -28,6 +30,8 @@ import { configValidationSchema } from './config/env.schema';
     ]),
     PrismaModule,
     AuthModule,
+    BookingModule,
+    NotificationModule
   ],
   controllers: [AppController],
   providers: [AppService],

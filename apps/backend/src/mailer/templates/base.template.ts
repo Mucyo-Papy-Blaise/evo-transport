@@ -10,7 +10,7 @@ interface BaseTemplateConfig {
 
 //   Default configuration for
 const DEFAULT_CONFIG: BaseTemplateConfig = {
-  platformName: process.env.PLATFORM_NAME || 'EIG CAPITALSUITE',
+  platformName: process.env.PLATFORM_NAME || 'EVO TRANSPORT',
   platformIcon:
     process.env.PLATFORM_LOGO_URL ||
     'https://via.placeholder.com/40x40.png?text=E-Learn',
@@ -272,6 +272,108 @@ export function createCodeDisplay(
       `
           : ''
       }
+    </div>
+  `;
+}
+
+export function createTwoColumnLayout(
+  leftColumn: Array<{ label: string; value: string }>,
+  rightColumn: Array<{ label: string; value: string }>,
+  options?: {
+    leftWidth?: string;
+    rightWidth?: string;
+    gap?: string;
+  },
+): string {
+  const leftWidth = options?.leftWidth || '48%';
+  const rightWidth = options?.rightWidth || '48%';
+  const gap = options?.gap || '4%';
+
+  const renderColumn = (items: Array<{ label: string; value: string }>) => {
+    return items
+      .map(
+        (item) => `
+        <div style="margin-bottom: 12px;">
+          <div style="font-size: 12px; color: #6B7280; margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.5px;">
+            ${item.label}
+          </div>
+          <div style="font-size: 14px; color: #111827; font-weight: 500; word-break: break-word;">
+            ${item.value}
+          </div>
+        </div>
+      `,
+      )
+      .join('');
+  };
+
+  return `
+    <div style="
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      margin: 16px 0;
+      padding: 12px;
+      background-color: #F9FAFB;
+      border-radius: 8px;
+    ">
+      <div style="width: ${leftWidth};">
+        ${renderColumn(leftColumn)}
+      </div>
+      <div style="width: ${rightWidth};">
+        ${renderColumn(rightColumn)}
+      </div>
+    </div>
+  `;
+}
+
+// You can also add a three-column layout if needed
+export function createThreeColumnLayout(
+  columns: Array<Array<{ label: string; value: string }>>,
+  options?: {
+    columnWidths?: string[];
+    gap?: string;
+  },
+): string {
+  const defaultWidths = ['32%', '32%', '32%'];
+  const columnWidths = options?.columnWidths || defaultWidths;
+  const gap = options?.gap || '2%';
+
+  const renderColumn = (items: Array<{ label: string; value: string }>) => {
+    return items
+      .map(
+        (item) => `
+        <div style="margin-bottom: 12px;">
+          <div style="font-size: 12px; color: #6B7280; margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.5px;">
+            ${item.label}
+          </div>
+          <div style="font-size: 14px; color: #111827; font-weight: 500; word-break: break-word;">
+            ${item.value}
+          </div>
+        </div>
+      `,
+      )
+      .join('');
+  };
+
+  return `
+    <div style="
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      margin: 16px 0;
+      padding: 12px;
+      background-color: #F9FAFB;
+      border-radius: 8px;
+    ">
+      ${columns
+        .map(
+          (column, index) => `
+          <div style="width: ${columnWidths[index]};">
+            ${renderColumn(column)}
+          </div>
+        `,
+        )
+        .join('')}
     </div>
   `;
 }

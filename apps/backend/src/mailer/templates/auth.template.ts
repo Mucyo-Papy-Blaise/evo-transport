@@ -8,7 +8,7 @@ import { getPlatformName, getBrandColor } from './template.utils';
 // Brand color for consistent styling across all auth templates
 const BRAND_COLOR = getBrandColor();
 
-// Authentication Email Templates for EIG CAPITALSUITE
+// Authentication Email Templates
 export const AUTH_TEMPLATES = {
   WELCOME_NEW_USER: (data: {
     fullName: string;
