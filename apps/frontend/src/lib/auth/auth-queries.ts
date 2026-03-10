@@ -2,11 +2,11 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-// import { authApi } from '../api/auth-api';
+import { authApi } from '../api/auth-api';
 import { tokenStorage } from '@/lib/api/api-client';
 import { queryKeys } from '@/lib/query/query-keys';
 import { ApiError } from '@/lib/query/query-client';
-// import type { AuthUser, LoginPayload } from '@/lib/types/auth';
+import type { AuthUser, LoginPayload } from '@/types';
 import { toast } from '@/components/ui/toast';
 
 function useHasToken(): boolean {
@@ -31,16 +31,16 @@ function useHasToken(): boolean {
 export function useCurrentUser() {
   const hasToken = useHasToken();
 
-  const query = useQuery<ApiError>({
+  const query = useQuery<AuthUser, ApiError>({
     queryKey: queryKeys.auth.me(),
-    // queryFn: () => authApi.me(),
+    queryFn: () => authApi.me(),
     enabled: hasToken,
     placeholderData: (prev) => prev,
     staleTime: 1000 * 60 * 5,
-    // retry: (count, error) => {
-    //   if (error.status === 401) return false;
-    //   return count < 2;
-    // },
+    retry: (count, error) => {
+      if (error.status === 401) return false;
+      return count < 2;
+    },
   });
 
   return {
@@ -54,13 +54,13 @@ export function useLogin() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    // mutationFn: (payload: LoginPayload) => authApi.login(payload),
+    mutationFn: (payload: LoginPayload) => authApi.login(payload),
 
-    // onSuccess: ({ accessToken, user }) => {
-    //   tokenStorage.set(accessToken);
-    //   queryClient.setQueryData<AuthUser>(queryKeys.auth.me(), user);
-    //   toast.success('Welcome back!', `Logged in as ${user.fullName || user.email}`);
-    // },
+    onSuccess: ({ accessToken, user }) => {
+      tokenStorage.set(accessToken);
+      queryClient.setQueryData<AuthUser>(queryKeys.auth.me(), user);
+      toast.success('Welcome back!', `Logged in as ${user.fullName || user.email}`);
+    },
   });
 }
 
@@ -69,7 +69,7 @@ export function useLogout() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    // mutationFn: () => authApi.logout().catch(() => undefined),
+    mutationFn: () => authApi.logout().catch(() => undefined),
 
     onSuccess: () => {
       toast.info('Logged out', 'You have been signed out successfully.');

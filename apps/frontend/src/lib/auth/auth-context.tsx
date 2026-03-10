@@ -3,7 +3,7 @@
 import React, { createContext, useContext } from 'react';
 import { useCurrentUser, useLogin, useLogout } from '@/lib/auth/auth-queries';
 import type { UseMutateAsyncFunction } from '@tanstack/react-query';
-import type { AuthUser, LoginPayload, LoginResponse } from '@/lib/types/auth';
+import type { AuthUser, LoginPayload, LoginResponse } from '@/types';
 
 interface AuthContextValue {
   user:    AuthUser | null;

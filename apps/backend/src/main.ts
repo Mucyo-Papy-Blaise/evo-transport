@@ -93,7 +93,7 @@ async function bootstrap() {
   // Swagger setup
   const config = new DocumentBuilder()
     .setTitle('EVO-TRANSPORT')
-    .setDescription('API documentation for the E-Learning Platform')
+    .setDescription('API documentation for the EVo-Transport Platform')
     .setVersion('1.0')
     .addBearerAuth(
       {
@@ -108,7 +108,7 @@ async function bootstrap() {
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document, {
-    customSiteTitle: 'E-Learning API Docs',
+    customSiteTitle: 'EVo-TransportAPI Docs',
     customCss: '.swagger-ui .topbar { display: none }',
     swaggerOptions: {
       persistAuthorization: true,

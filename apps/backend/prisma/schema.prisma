@@ -49,6 +49,19 @@ enum LocationType {
   OTHER
 }
 
+enum BookingStatus {
+  PENDING        
+  CONFIRMED   
+  REJECTED       
+  CANCELLED     
+  COMPLETED  
+}
+
+enum TripType {
+  ONE_WAY
+  ROUND_TRIP
+}
+
 model User {
   id              String          @id @default(cuid())
   email           String          @unique
@@ -81,10 +94,11 @@ model User {
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
   
-  // Relations - Commented out until we create these models
-  // bookings         Booking[]
-   savedLocations   SavedLocation[]
-   auditLogs        AuditLog[] 
+  // Relations
+  bookings        Booking[]
+  savedLocations  SavedLocation[]
+  auditLogs       AuditLog[]
+  notifications   Notification[]
   
   // Indexes
   @@index([email])
@@ -92,6 +106,7 @@ model User {
   @@index([role])
   @@index([status])
   @@index([createdAt])
+  @@map("users")
 }
 
 model SavedLocation {
@@ -118,6 +133,7 @@ model SavedLocation {
   @@index([userId])
   @@index([type])
   @@index([airportCode])
+  @@map("saved_locations")
 }
 
 model AuditLog {
@@ -142,4 +158,101 @@ model AuditLog {
   @@index([action])
   @@index([method])
   @@index([status])
+  @@map("audit_logs")
+}
+
+model Booking {
+  id              String          @id @default(cuid())
+  bookingReference String         @unique // Auto-generated: EVO-YYYYMMDD-XXXXX
+  
+  // User association
+  userId          String?
+  user            User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  // Guest info (filled if userId is null)
+  guestEmail      String?
+  guestName       String?
+  guestPhone      String?
+  guestSessionId  String?         // To track guest sessions
+  
+  // Booking Details
+  tripType        TripType
+  fromLocation    String        
+  toLocation      String        
+  fromCode        String?   
+  toCode          String?      
+  fromCity        String?      
+  toCity          String?   
+  
+  // Date and Time
+  departureDate   DateTime
+  returnDate      DateTime?
+  departureTime   String          // "09:00"
+  returnTime      String?
+  passengers      Int
+  
+  // Pricing
+  price           Float           // Total price
+  currency        Currency        @default(RWF)
+  
+  // Status
+  status          BookingStatus   @default(PENDING)
+  adminNotes      String?         // Internal notes from admin
+  
+  // Admin interaction
+  adminRespondedAt DateTime?
+  adminRespondedBy String?        // Admin user ID who responded
+  
+  // Timestamps
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  confirmedAt     DateTime?       // When booking was confirmed
+  cancelledAt     DateTime?       // When booking was cancelled
+
+  // Relations
+  notifications   Notification[]
+
+  // Indexes for querying popular routes
+  @@index([bookingReference])
+  @@index([userId])
+  @@index([guestEmail])
+  @@index([status])
+  @@index([createdAt])
+  @@index([departureDate])
+  @@index([fromCode])   
+  @@index([toCode])    
+  @@index([fromLocation]) 
+  @@index([toLocation])  
+}
+
+
+// Notification of Admin
+model Notification {
+  id              String          @id @default(cuid())
+  bookingId       String?
+  booking         Booking?        @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  userId          String?
+  user            User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  // Recipient info
+  recipientEmail  String
+  recipientName   String?
+  recipientType   String  
+  
+  // Notification details
+  type            String         
+  subject         String
+  content         String?  
+  sentAt          DateTime        @default(now())
+  readAt          DateTime? 
+  
+  // Status
+  status          String 
+  errorMessage    String?
+  
+  @@index([bookingId])
+  @@index([userId])
+  @@index([recipientEmail])
+  @@index([sentAt])
+  @@map("notifications")
 }

@@ -1,10 +1,11 @@
 import { Header } from '@/components/landing/Header';
 import { Hero } from '@/components/landing/Hero';
 import { WhyChooseUs } from '@/components/landing/WhyChooseUs';
-import { PopularTickets } from '@/components/landing/PopularTickets';
-import { Steps } from '@/components/landing/Steps';
-import { Insights } from '@/components/landing/Insights';
+import { PopularRoutes } from '@/components/landing/PopularRoutes';
+// import { Steps } from '@/components/landing/Steps';
+// import { Insights } from '@/components/landing/Insights';
 import { Footer } from '@/components/landing/Footer';
+import { TrackBooking } from '@/components/landing/TrackBooking';
 
 export default function LandingPage() {
   return (
@@ -12,9 +13,10 @@ export default function LandingPage() {
       <Header />
       <Hero />
       <WhyChooseUs />
-      <PopularTickets />
-      <Steps />
-      <Insights />
+      <PopularRoutes />
+      {/* <Steps /> */}
+      {/* <Insights /> */}
+       <TrackBooking />
       <Footer />
     </main>
   );

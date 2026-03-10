@@ -100,7 +100,7 @@ export interface EmailServiceConfig {
   preview?: boolean;
 }
 
-export type TemplateCategory = 'AUTH' | 'USER';
+export type TemplateCategory = 'AUTH' | 'USER' | 'BOOKING';
 
 
 /** Payload for lecturer assigned emails */
