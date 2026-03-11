@@ -5,6 +5,7 @@ import { MailerService } from './mailer.service';
 import { TemplateService } from './templates/template.service';
 
 // Provides email sending functionality with templating support
+// Transport: Resend SMTP relay (smtp.resend.com:465, SSL)
 @Module({
   imports: [
     ConfigModule,
@@ -12,14 +13,13 @@ import { TemplateService } from './templates/template.service';
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
         transport: {
-          host: configService.get<string>('MAIL_HOST'),
-          port: configService.get<number>('MAIL_PORT'),
-          secure: configService.get<boolean>('MAIL_SECURE', false),
+          host: 'smtp.resend.com',
+          port: 465,
+          secure: true, // SSL on port 465
           auth: {
-            user: configService.get<string>('MAIL_USER'),
-            pass: configService.get<string>('MAIL_PASSWORD'),
+            user: 'resend', // Resend SMTP username is always "resend"
+            pass: configService.get<string>('RESEND_API_KEY'),
           },
-          // Additional transport options
           pool: true,
           maxConnections: configService.get<number>('MAIL_MAX_CONNECTIONS', 5),
           maxMessages: configService.get<number>('MAIL_MAX_MESSAGES', 100),
@@ -29,13 +29,10 @@ import { TemplateService } from './templates/template.service';
         defaults: {
           from: {
             name: configService.get<string>('MAIL_FROM_NAME', 'EVO TRANSPORT'),
-            address: configService.get<string>(
-              'MAIL_FROM_ADDRESS',
-              'noreply@elearning.com',
-            ),
+            // Must be an email from a domain you've verified in Resend
+            address: configService.get<string>('MAIL_FROM_ADDRESS'),
           },
         },
-        // Preview emails in development (optional)
         preview: configService.get<boolean>('MAIL_PREVIEW', false),
       }),
       inject: [ConfigService],
