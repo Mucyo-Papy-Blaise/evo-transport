@@ -3,9 +3,87 @@
 import { motion } from "framer-motion";
 import { useInView } from "framer-motion";
 import { useRef } from "react";
+import { useRouter } from "next/navigation";
 import { fadeInUp, staggerContainer } from "@/utils/animations";
 import { containerPadding } from "@/lib/constants/layout";
 import { MapPin, Euro } from "lucide-react";
+import { toast } from "@/components/ui/toast";
+
+// Mock shuttle data for popular routes
+const mockShuttles = {
+  "LUX-BRU": {
+    id: "popular-1",
+    provider: "Royal Express",
+    vehicleType: "Luxury Bus",
+    departureTime: "08:00",
+    arrivalTime: "10:30",
+    duration: "2h 30m",
+    price: 45,
+    currency: "£",
+    availableSeats: 12,
+    amenities: ["WiFi", "AC", "Refreshments", "USB Charger"],
+  },
+  "FRA-LUX": {
+    id: "popular-2",
+    provider: "Volcano Safari",
+    vehicleType: "Electric SUV",
+    departureTime: "09:15",
+    arrivalTime: "11:15",
+    duration: "2h 00m",
+    price: 55,
+    currency: "£",
+    availableSeats: 4,
+    amenities: ["WiFi", "AC", "Water", "Charging"],
+  },
+  "CDG-LUX": {
+    id: "popular-3",
+    provider: "Kigali Express",
+    vehicleType: "Minibus",
+    departureTime: "10:30",
+    arrivalTime: "13:00",
+    duration: "2h 30m",
+    price: 65,
+    currency: "£",
+    availableSeats: 8,
+    amenities: ["AC", "USB Charger"],
+  },
+  "SXB-LUX": {
+    id: "popular-4",
+    provider: "Royal Express",
+    vehicleType: "Luxury Bus",
+    departureTime: "12:00",
+    arrivalTime: "14:30",
+    duration: "2h 30m",
+    price: 35,
+    currency: "£",
+    availableSeats: 18,
+    amenities: ["WiFi", "AC", "Refreshments"],
+  },
+  "AMS-BRU": {
+    id: "popular-5",
+    provider: "Volcano Safari",
+    vehicleType: "Electric Sedan",
+    departureTime: "14:00",
+    arrivalTime: "16:00",
+    duration: "2h 00m",
+    price: 50,
+    currency: "£",
+    availableSeats: 3,
+    amenities: ["WiFi", "AC", "Water"],
+  },
+  "ZRH-BSL": {
+    id: "popular-6",
+    provider: "Volcano Safari",
+    vehicleType: "Electric SUV",
+    departureTime: "15:30",
+    arrivalTime: "17:00",
+    duration: "1h 30m",
+    price: 40,
+    currency: "£",
+    availableSeats: 4,
+    amenities: ["WiFi", "AC", "Water"],
+  },
+};
 
 const popularRoutes = [
   {
@@ -16,6 +94,7 @@ const popularRoutes = [
     toCode: "BRU",
     price: 45,
     currency: "£",
+    routeKey: "LUX-BRU",
   },
   {
     id: 2,
@@ -25,6 +104,7 @@ const popularRoutes = [
     toCode: "LUX",
     price: 55,
     currency: "£",
+    routeKey: "FRA-LUX",
   },
   {
     id: 3,
@@ -34,6 +114,7 @@ const popularRoutes = [
     toCode: "LUX",
     price: 65,
     currency: "£",
+    routeKey: "CDG-LUX",
   },
   {
     id: 4,
@@ -43,6 +124,7 @@ const popularRoutes = [
     toCode: "LUX",
     price: 35,
     currency: "£",
+    routeKey: "SXB-LUX",
   },
   {
     id: 5,
@@ -52,6 +134,7 @@ const popularRoutes = [
     toCode: "BRU",
     price: 50,
     currency: "£",
+    routeKey: "AMS-BRU",
   },
   {
     id: 6,
@@ -61,6 +144,7 @@ const popularRoutes = [
     toCode: "BSL",
     price: 40,
     currency: "£",
+    routeKey: "ZRH-BSL",
   },
 ];
 
@@ -76,8 +160,37 @@ const priceSummary = [
 ];
 
 export function PopularRoutes() {
+  const router = useRouter();
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, amount: 0.3 });
+
+  const handleBookNow = (route: typeof popularRoutes[0]) => {
+    // Get the mock shuttle for this route
+    const shuttle = mockShuttles[route.routeKey as keyof typeof mockShuttles];
+    
+    if (!shuttle) {
+      toast.error("Route unavailable", "This route is temporarily unavailable");
+      return;
+    }
+
+    // Store selected route and shuttle in sessionStorage
+    sessionStorage.setItem(
+      "selectedRoute",
+      JSON.stringify({
+        fromLocation: route.from,
+        toLocation: route.to,
+        fromCode: route.fromCode,
+        toCode: route.toCode,
+        shuttle: {
+          ...shuttle,
+          price: route.price, // Use the displayed price
+        },
+      })
+    );
+
+    // Navigate to booking page
+    router.push("/booking");
+  };
 
   return (
     <section ref={ref} className="relative py-24 overflow-hidden">
@@ -140,7 +253,7 @@ export function PopularRoutes() {
               variants={fadeInUp}
               custom={index}
               whileHover={{ y: -4 }}
-              className="group relative bg-card/80 backdrop-blur-sm rounded-xl p-5 border border-border hover:border-primary/30 cursor-pointer transition-all duration-300 shadow-sm hover:shadow-lg hover:shadow-primary/5"
+              className="group relative bg-card/80 backdrop-blur-sm rounded-xl p-5 border border-border hover:border-primary/30 transition-all duration-300 shadow-sm hover:shadow-lg hover:shadow-primary/5"
             >
               <div className="flex items-center justify-between mb-3">
                 {/* From */}
@@ -190,6 +303,10 @@ export function PopularRoutes() {
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleBookNow(route);
+                  }}
                   className="px-4 py-1.5 rounded cursor-pointer text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
                 >
                   Book Now
