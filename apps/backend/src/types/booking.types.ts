@@ -1,4 +1,5 @@
 import { BookingStatus, TripType, Currency } from '@prisma/client';
+import { PassengerDetail } from './passenger.types';
 
 export interface CreateBookingDto {
   guestEmail?: string;
@@ -55,7 +56,10 @@ export interface BookingResponse {
   returnDate: Date | null;
   departureTime: string;
   returnTime: string | null;
-  passengers: number;
+
+  // Passenger Information
+  passengers: number; // Total count
+  passengerDetails: PassengerDetail[]; // Detailed passenger info
 
   // Pricing
   price: number;
@@ -79,6 +83,15 @@ export interface BookingResponse {
     firstName: string | null;
     lastName: string | null;
   } | null;
+
+  // Computed fields
+  passengerSummary?: {
+    adultCount: number;
+    childCount: number;
+    infantCount: number;
+    seniorCount: number;
+    requiresAssistanceCount: number;
+  };
 }
 
 export interface BookingListResponse {

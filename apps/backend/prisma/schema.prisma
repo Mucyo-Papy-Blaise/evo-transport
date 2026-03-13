@@ -189,8 +189,11 @@ model Booking {
   returnDate      DateTime?
   departureTime   String          // "09:00"
   returnTime      String?
-  passengers      Int
   
+  // Passenger Information
+  passengers      Int              // Total count
+  passengerDetails Json?           // JSON array of passenger details
+
   // Pricing
   price           Float           // Total price
   currency        Currency        @default(RWF)
@@ -223,6 +226,7 @@ model Booking {
   @@index([toCode])    
   @@index([fromLocation]) 
   @@index([toLocation])  
+  @@map("bookings")
 }
 
 
