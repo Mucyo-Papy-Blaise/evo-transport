@@ -80,7 +80,7 @@ export function useCheckAvailability() {
   });
 }
 
-// ==================== Cancel Booking Hook ====================
+// ==================== Cancel Booking Hook
 
 export function useCancelBooking() {
   const queryClient = useQueryClient();

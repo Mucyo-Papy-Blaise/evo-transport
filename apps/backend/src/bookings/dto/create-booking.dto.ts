@@ -7,10 +7,55 @@ import {
   Min,
   Max,
   Matches,
+  ValidateNested,
+  IsArray,
+  IsBoolean,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { TripType, Currency } from '@prisma/client';
+import { PassengerType, AssistanceType } from 'src/types/passenger.types';
+
+export class PassengerDetailDto {
+  @ApiProperty({ enum: PassengerType, example: PassengerType.ADULT })
+  @IsEnum(PassengerType)
+  type: PassengerType;
+
+  @ApiProperty({ example: 35, minimum: 0, maximum: 120 })
+  @IsNumber()
+  @Min(0)
+  @Max(120)
+  age: number;
+
+  @ApiPropertyOptional({ example: 'John Doe' })
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @ApiProperty({ example: false })
+  @IsBoolean()
+  requiresAssistance: boolean;
+
+  @ApiPropertyOptional({ enum: AssistanceType })
+  @IsOptional()
+  @IsEnum(AssistanceType)
+  assistanceType?: AssistanceType;
+
+  @ApiPropertyOptional({ example: 'Needs aisle seat' })
+  @IsOptional()
+  @IsString()
+  specialNeeds?: string;
+
+  @ApiPropertyOptional({ example: 'window' })
+  @IsOptional()
+  @IsString()
+  seatPreference?: string;
+
+  @ApiPropertyOptional({ example: 'vegetarian' })
+  @IsOptional()
+  @IsString()
+  mealPreference?: string;
+}
 
 export class CreateBookingDto {
   @ApiPropertyOptional({ example: 'guest@example.com' })
@@ -90,12 +135,14 @@ export class CreateBookingDto {
   })
   returnTime?: string;
 
-  @ApiProperty({ example: 2, minimum: 1, maximum: 20 })
-  @IsNumber()
-  @Min(1)
-  @Max(20)
-  @Type(() => Number)
-  passengers: number;
+  @ApiProperty({
+    type: [PassengerDetailDto],
+    description: 'Detailed passenger information',
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PassengerDetailDto)
+  passengerDetails: PassengerDetailDto[];
 
   @ApiProperty({ example: 45000 })
   @IsNumber()

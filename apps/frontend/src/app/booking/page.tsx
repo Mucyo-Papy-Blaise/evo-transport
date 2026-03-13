@@ -5,8 +5,6 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import Link from "next/link";
-
-// Shadcn UI Components
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -32,8 +30,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-
-// Icons
 import {
   ArrowLeft,
   Bus,

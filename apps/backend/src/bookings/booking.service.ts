@@ -50,6 +50,16 @@ export class BookingService {
   private mapBookingToResponse(booking: any): BookingResponse {
     const userType = booking.userId ? 'REGISTERED' : 'GUEST';
 
+    // Parse passengerDetails if it's stored as JSON
+    const passengerDetails = booking.passengerDetails
+      ? typeof booking.passengerDetails === 'string'
+        ? JSON.parse(booking.passengerDetails)
+        : booking.passengerDetails
+      : [];
+
+    // Calculate passenger summary
+    const passengerSummary = this.calculatePassengerSummary(passengerDetails);
+
     return {
       id: booking.id,
       bookingReference: booking.bookingReference,
@@ -70,6 +80,8 @@ export class BookingService {
       departureTime: booking.departureTime,
       returnTime: booking.returnTime,
       passengers: booking.passengers,
+      passengerDetails,
+      passengerSummary,
       price: booking.price,
       currency: booking.currency,
       status: booking.status,
@@ -106,17 +118,29 @@ export class BookingService {
       );
     }
 
+    // Validate passenger details
+    if (!dto.passengerDetails || dto.passengerDetails.length === 0) {
+      throw new BadRequestException('Passenger details are required');
+    }
+
+    // Calculate total passengers
+    const totalPassengers = dto.passengerDetails.length;
+
     const bookingReference = this.generateBookingReference();
 
     // Convert date strings to Date objects
     const departureDate = new Date(dto.departureDate);
-    departureDate.setHours(0, 0, 0, 0); // Set to start of day
+    departureDate.setHours(0, 0, 0, 0);
 
     let returnDate: Date | null = null;
     if (dto.returnDate) {
       returnDate = new Date(dto.returnDate);
-      returnDate.setHours(0, 0, 0, 0); // Set to start of day
+      returnDate.setHours(0, 0, 0, 0);
     }
+
+    // Calculate passenger summary for logging
+    const summary = this.calculatePassengerSummary(dto.passengerDetails);
+    this.logger.log(`Passenger summary: ${JSON.stringify(summary)}`);
 
     // Create booking in database
     const booking = await this.prisma.booking.create({
@@ -138,7 +162,8 @@ export class BookingService {
         returnDate,
         departureTime: dto.departureTime,
         returnTime: dto.returnTime,
-        passengers: dto.passengers,
+        passengers: totalPassengers,
+        passengerDetails: dto.passengerDetails, // Store as JSON
         price: dto.price,
         currency: dto.currency || Currency.RWF,
         status: BookingStatus.PENDING,
@@ -159,6 +184,19 @@ export class BookingService {
     await this.sendBookingEmails(booking);
 
     return this.mapBookingToResponse(booking);
+  }
+
+  private calculatePassengerSummary(passengers: any[]) {
+    return passengers.reduce(
+      (acc, p) => {
+        acc[p.type] = (acc[p.type] || 0) + 1;
+        if (p.requiresAssistance) {
+          acc.requiresAssistance += 1;
+        }
+        return acc;
+      },
+      { adult: 0, child: 0, infant: 0, senior: 0, requiresAssistance: 0 },
+    );
   }
 
   private async sendBookingEmails(booking: any): Promise<void> {
