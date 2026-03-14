@@ -68,10 +68,12 @@ export class CreateBookingDto {
   @IsString()
   guestName?: string;
 
-  @ApiPropertyOptional({ example: '+250788123456' })
-  @IsOptional()
+  @ApiProperty({
+    example: '+250788123456',
+    description: 'Phone number (required for contact)',
+  })
   @IsString()
-  guestPhone?: string;
+  guestPhone: string;
 
   @ApiProperty({ enum: TripType, example: TripType.ONE_WAY })
   @IsEnum(TripType)
@@ -89,6 +91,11 @@ export class CreateBookingDto {
   @IsOptional()
   @IsString()
   fromCode?: string;
+
+  @ApiPropertyOptional({ example: 'When distance is ggreater than 400KM' })
+  @IsOptional()
+  @IsString()
+  message?: string;
 
   @ApiPropertyOptional({ example: 'MZN' })
   @IsOptional()

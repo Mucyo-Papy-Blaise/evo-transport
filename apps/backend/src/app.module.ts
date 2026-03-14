@@ -8,6 +8,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { configValidationSchema } from './config/env.schema';
 import { BookingModule } from './bookings/booking.module';
 import { NotificationModule } from './notifications/notification.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -31,7 +32,8 @@ import { NotificationModule } from './notifications/notification.module';
     PrismaModule,
     AuthModule,
     BookingModule,
-    NotificationModule
+    NotificationModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [AppService],

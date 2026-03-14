@@ -16,22 +16,10 @@ import Link from 'next/link';
 
 const footerLinks = {
   quickLinks: [
-    { label: 'About Us', href: '/about' },
-    { label: 'Services', href: '/services' },
+    { label: 'Why Choose Us', href: '/#why-choose-us' },
+    { label: 'Popular Routes', href: '/#popular-routes' },
+    { label: 'Track Booking', href: '/#track-booking' },
     { label: 'Contact', href: '/contact' },
-    { label: 'FAQ', href: '/faq' },
-  ],
-  support: [
-    { label: 'Help Center', href: '/help' },
-    { label: 'Terms of Service', href: '/terms' },
-    { label: 'Privacy Policy', href: '/privacy' },
-    { label: 'Safety', href: '/safety' },
-  ],
-  company: [
-    { label: 'Careers', href: '/careers' },
-    { label: 'Blog', href: '/blog' },
-    { label: 'Press', href: '/press' },
-    { label: 'Partners', href: '/partners' },
   ],
   social: [
     { icon: Facebook, href: 'https://facebook.com', label: 'Facebook' },
@@ -48,18 +36,17 @@ export function Footer() {
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-0 left-0 w-full h-px bg-linear-to-r from-transparent via-primary/50 to-transparent" />
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
-        <div className="absolute top-20 left-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl" />
       </div>
 
       <div className={`mx-auto max-w-7xl ${containerPadding.default} relative z-10 w-full`}>
-        {/* Main Footer Content */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-12 py-16 w-full">
-          {/* Company Info - 4 columns */}
-          <div className="lg:col-span-4 space-y-6">
+        {/* Main Footer Content - All sections in one line */}
+        <div className="flex flex-wrap justify-between gap-8 lg:gap-12 py-16 w-full">
+          {/* Brand & Contact Section */}
+          <div className="flex-1 min-w-[280px] space-y-6">
             <Link href="/" className="inline-block group">
-              <h3 className="text-2xl font-bold text-foreground group-hover:text-primary transition-colors">
+              <h2 className="text-2xl font-bold text-foreground group-hover:text-primary transition-colors">
                 EVO<span className="text-primary">Transport</span>
-              </h3>
+              </h2>
               <div className="w-12 h-0.5 bg-primary/50 mt-1 group-hover:w-20 transition-all duration-300" />
             </Link>
             
@@ -88,37 +75,18 @@ export function Footer() {
                 <span className="text-muted-foreground">info@evotransport.rw</span>
               </div>
             </div>
-
-            {/* Social Links */}
-            <div className="flex items-center gap-3 pt-4">
-              {footerLinks.social.map((social, index) => {
-                const Icon = social.icon;
-                return (
-                  <motion.a
-                    key={index}
-                    href={social.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    whileHover={{ y: -3, scale: 1.1 }}
-                    className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-all duration-300"
-                    aria-label={social.label}
-                  >
-                    <Icon className="w-5 h-5" />
-                  </motion.a>
-                );
-              })}
-            </div>
           </div>
 
-          {/* Quick Links - 3 columns */}
-          <div className="lg:col-span-2">
-            <h4 className="text-lg font-semibold text-foreground mb-6">Quick Links</h4>
+          {/* Quick Links */}
+          <div className="flex-1 min-w-[160px]">
+            <h3 className="text-lg font-semibold text-foreground mb-6">Quick Links</h3>
             <ul className="space-y-3">
               {footerLinks.quickLinks.map((link) => (
                 <li key={link.label}>
                   <Link
                     href={link.href}
                     className="group inline-flex items-center text-muted-foreground hover:text-primary transition-colors"
+                    scroll={link.href.includes('#')}
                   >
                     <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 mr-2 transition-all -translate-x-2 group-hover:translate-x-0" />
                     <span>{link.label}</span>
@@ -128,60 +96,32 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Support - 3 columns */}
-          <div className="lg:col-span-2">
-            <h4 className="text-lg font-semibold text-foreground mb-6">Support</h4>
-            <ul className="space-y-3">
-              {footerLinks.support.map((link) => (
-                <li key={link.label}>
-                  <Link
-                    href={link.href}
-                    className="group inline-flex items-center text-muted-foreground hover:text-primary transition-colors"
-                  >
-                    <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 mr-2 transition-all -translate-x-2 group-hover:translate-x-0" />
-                    <span>{link.label}</span>
-                  </Link>
-                </li>
+          {/* Social Links */}
+          <div className="flex-1 min-w-[160px]">
+            <h3 className="text-lg font-semibold text-foreground mb-6">Follow Us</h3>
+            <div className="flex flex-wrap items-center gap-3">
+              {footerLinks.social.map((social) => (
+                <motion.a
+                  key={social.label}
+                  href={social.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  whileHover={{ y: -3, scale: 1.1 }}
+                  className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:bg-primary hover:text-primary-foreground transition-all duration-300"
+                  aria-label={social.label}
+                >
+                  <social.icon className="w-5 h-5" />
+                </motion.a>
               ))}
-            </ul>
-          </div>
-
-          {/* Company - 3 columns */}
-          <div className="lg:col-span-3">
-            <h4 className="text-lg font-semibold text-foreground mb-6">Company</h4>
-            <ul className="space-y-3">
-              {footerLinks.company.map((link) => (
-                <li key={link.label}>
-                  <Link
-                    href={link.href}
-                    className="group inline-flex items-center text-muted-foreground hover:text-primary transition-colors"
-                  >
-                    <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 mr-2 transition-all -translate-x-2 group-hover:translate-x-0" />
-                    <span>{link.label}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            </div>
           </div>
         </div>
 
         {/* Bottom Bar */}
-        <div className="py-6 border-t border-border flex flex-col md:flex-row items-center justify-between gap-4 w-full">
+        <div className="py-6 border-t border-border flex flex-col md:flex-row items-center justify-center  w-full">
           <p className="text-sm text-muted-foreground text-center md:text-left">
             © {new Date().getFullYear()} EVO Transport. All rights reserved.
           </p>
-          
-          <div className="flex items-center gap-6">
-            <Link href="/privacy" className="text-xs text-muted-foreground hover:text-primary transition-colors">
-              Privacy Policy
-            </Link>
-            <Link href="/terms" className="text-xs text-muted-foreground hover:text-primary transition-colors">
-              Terms of Service
-            </Link>
-            <Link href="/cookies" className="text-xs text-muted-foreground hover:text-primary transition-colors">
-              Cookie Policy
-            </Link>
-          </div>
         </div>
       </div>
     </footer>

@@ -51,6 +51,7 @@ export interface BookingResponse {
   fromCode: string | null;
   toCode: string | null;
   fromCity: string | null;
+  message: string | null;
   toCity: string | null;
   departureDate: Date;
   returnDate: Date | null;

@@ -1,116 +1,75 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import {
+  X,
   Bus,
   Clock,
   Users,
   Wifi,
-  Coffee,
   BatteryCharging,
+  Coffee,
+  ChevronRight,
+  MapPin,
+  Zap,
+  Star,
   ArrowRight,
-  AlertCircle,
-} from "lucide-react";
-import { SearchResult, SearchFilters } from "@/types";
-import { cn } from "@/utils/utils";
-import { useAuth } from "@/lib/auth/auth-context";
-import { Label } from "@/components/ui/label"; // Fixed import
-import { Input } from "@/components/ui/input";
-
-// Mock results for demo
-const mockResults: SearchResult[] = [
-  {
-    id: "1",
-    provider: "Royal Express",
-    vehicleType: "Luxury Bus",
-    departureTime: "08:00",
-    arrivalTime: "10:30",
-    duration: "2h 30m",
-    price: 15000,
-    currency: "RWF",
-    availableSeats: 12,
-    amenities: ["WiFi", "AC", "Refreshments", "USB Charger"],
-  },
-  {
-    id: "2",
-    provider: "Volcano Safari",
-    vehicleType: "Electric SUV",
-    departureTime: "09:15",
-    arrivalTime: "11:15",
-    duration: "2h 00m",
-    price: 25000,
-    currency: "RWF",
-    availableSeats: 4,
-    amenities: ["WiFi", "AC", "Water", "Charging", "Panoramic Roof"],
-  },
-  {
-    id: "3",
-    provider: "Kigali Express",
-    vehicleType: "Minibus",
-    departureTime: "10:30",
-    arrivalTime: "13:00",
-    duration: "2h 30m",
-    price: 12000,
-    currency: "RWF",
-    availableSeats: 8,
-    amenities: ["AC", "USB Charger"],
-  },
-  {
-    id: "4",
-    provider: "Royal Express",
-    vehicleType: "Luxury Bus",
-    departureTime: "12:00",
-    arrivalTime: "14:30",
-    duration: "2h 30m",
-    price: 15000,
-    currency: "RWF",
-    availableSeats: 18,
-    amenities: ["WiFi", "AC", "Refreshments", "USB Charger"],
-  },
-  {
-    id: "5",
-    provider: "Volcano Safari",
-    vehicleType: "Electric Sedan",
-    departureTime: "14:00",
-    arrivalTime: "16:00",
-    duration: "2h 00m",
-    price: 22000,
-    currency: "RWF",
-    availableSeats: 3,
-    amenities: ["WiFi", "AC", "Water", "Charging"],
-  },
-];
-
-// Amenity icons mapping
-const amenityIcons: Record<string, React.ReactNode> = {
-  WiFi: <Wifi className="h-3 w-3" />,
-  AC: <Coffee className="h-3 w-3" />,
-  Refreshments: <Coffee className="h-3 w-3" />,
-  "USB Charger": <BatteryCharging className="h-3 w-3" />,
-  Charging: <BatteryCharging className="h-3 w-3" />,
-  Water: <Coffee className="h-3 w-3" />,
-  "Panoramic Roof": <Coffee className="h-3 w-3" />,
-};
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { cn } from '@/utils/utils';
+import { mockShuttles, type Shuttle } from '@/lib/mock-data';
+import type { SearchFilters } from '@/types';
 
 interface SearchResultsModalProps {
   isOpen: boolean;
   onClose: () => void;
   filters: SearchFilters | null;
   isLoading: boolean;
-  results?: SearchResult[];
-  onSelectResult: (result: SearchResult & { guestEmail?: string }) => void;
+  onSelectResult: (shuttle: Shuttle) => void;
+}
+
+const amenityIcons: Record<string, React.ReactNode> = {
+  WiFi: <Wifi className="h-3 w-3" />,
+  AC: <Zap className="h-3 w-3" />,
+  Refreshments: <Coffee className="h-3 w-3" />,
+  'USB Charger': <BatteryCharging className="h-3 w-3" />,
+  Charging: <BatteryCharging className="h-3 w-3" />,
+  Water: <Coffee className="h-3 w-3" />,
+  'Panoramic Roof': <Star className="h-3 w-3" />,
+};
+
+const vehicleTypeColor: Record<string, string> = {
+  'Luxury Bus': 'bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300',
+  'Electric SUV': 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300',
+  Minibus: 'bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300',
+  'Electric Sedan': 'bg-teal-100 text-teal-700 dark:bg-teal-950 dark:text-teal-300',
+};
+
+function SkeletonCard() {
+  return (
+    <div className="rounded-xl border border-border bg-card p-5 animate-pulse">
+      <div className="flex items-start gap-4">
+        <div className="w-12 h-12 rounded-full bg-muted shrink-0" />
+        <div className="flex-1 space-y-3">
+          <div className="flex justify-between">
+            <div className="space-y-2">
+              <div className="h-4 w-32 bg-muted rounded" />
+              <div className="h-3 w-20 bg-muted rounded" />
+            </div>
+            <div className="h-7 w-24 bg-muted rounded" />
+          </div>
+          <div className="flex gap-2">
+            <div className="h-3 w-16 bg-muted rounded" />
+            <div className="h-3 w-16 bg-muted rounded" />
+            <div className="h-3 w-16 bg-muted rounded" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function SearchResultsModal({
@@ -118,240 +77,260 @@ export function SearchResultsModal({
   onClose,
   filters,
   isLoading,
-  results = mockResults,
   onSelectResult,
 }: SearchResultsModalProps) {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [guestEmail, setGuestEmail] = useState("");
-  const [guestEmailError, setGuestEmailError] = useState("");
-  const { user } = useAuth();
+  const [results, setResults] = useState<Shuttle[]>([]);
 
-  const validateEmail = () => {
-    if (!user && !guestEmail) {
-      setGuestEmailError("Email is required");
-      return false;
+  useEffect(() => {
+    if (!filters?.fromCode || !filters?.toCode) {
+      setResults([]);
+      return;
     }
-    if (!user && !/\S+@\S+\.\S+/.test(guestEmail)) {
-      setGuestEmailError("Please enter a valid email");
-      return false;
+
+    const routeKey = `${filters.fromCode}-${filters.toCode}`;
+    const reverseKey = `${filters.toCode}-${filters.fromCode}`;
+
+    const shuttle = mockShuttles[routeKey] || mockShuttles[reverseKey];
+
+    // If there's a direct match, return it. Otherwise fall back to all shuttles
+    // so the user always sees options (real API would filter properly)
+    if (shuttle) {
+      setResults([shuttle]);
+    } else {
+      // No direct route found — show all available options as alternatives
+      setResults(Object.values(mockShuttles));
     }
-    return true;
-  };
+  }, [filters]);
 
-  const handleBook = () => {
-    const selected = results.find((r) => r.id === selectedId);
-    if (selected) {
-      onSelectResult(selected);
+  // Lock body scroll when open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
     }
-  };
-
-  const handleSelect = (result: SearchResult) => {
-    setSelectedId(result.id);
-  };
-
-  const getRouteDisplay = () => {
-    if (!filters) return "";
-    return `${filters.fromLocation} → ${filters.toLocation}`;
-  };
+    return () => { document.body.style.overflow = ''; };
+  }, [isOpen]);
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl p-0 gap-0 flex flex-col max-h-[90vh]">
-        {/* Fixed Header */}
-        <DialogHeader className="p-6 pb-4 border-b border-border shrink-0">
-          <DialogTitle className="text-2xl font-semibold text-foreground">
-            Available Shuttles
-          </DialogTitle>
-          {filters && (
-            <DialogDescription className="text-muted-foreground mt-1">
-              {getRouteDisplay()}
-            </DialogDescription>
-          )}
-        </DialogHeader>
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            key="backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+            onClick={onClose}
+          />
 
-        {/* Scrollable Content */}
-        <ScrollArea className="flex-1 px-6 py-2 min-h-0 overflow-y-auto">
-          {isLoading ? (
-            <div className="space-y-4 py-2">
-              {[1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className="bg-card border border-border rounded-xl p-5"
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="space-y-3 flex-1">
-                      <Skeleton className="h-6 w-32" />
-                      <Skeleton className="h-4 w-48" />
-                      <div className="flex gap-4">
-                        <Skeleton className="h-4 w-16" />
-                        <Skeleton className="h-4 w-16" />
-                        <Skeleton className="h-4 w-16" />
-                      </div>
-                    </div>
-                    <div className="text-right space-y-2">
-                      <Skeleton className="h-7 w-24" />
-                      <Skeleton className="h-9 w-28 rounded-lg" />
-                    </div>
+          {/* Sheet — slides up from bottom on mobile, centered on desktop */}
+          <motion.div
+            key="modal"
+            initial={{ opacity: 0, y: 60 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 60 }}
+            transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+            className={cn(
+              'fixed z-50 bg-background shadow-2xl',
+              // Mobile: full-width sheet from bottom
+              'bottom-0 left-0 right-0 rounded-t-2xl max-h-[90dvh]',
+              // Desktop: centered dialog
+              'md:bottom-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2',
+              'md:rounded-2xl md:w-full md:max-w-2xl md:max-h-[85vh]',
+            )}
+          >
+            {/* Drag handle (mobile) */}
+            <div className="md:hidden flex justify-center pt-3 pb-1">
+              <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
+            </div>
+
+            {/* Header */}
+            <div className="flex items-start justify-between px-6 py-4 border-b border-border">
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">
+                  Available Shuttles
+                </h2>
+                {filters && (
+                  <div className="flex items-center gap-1.5 mt-1 text-sm text-muted-foreground">
+                    <MapPin className="h-3.5 w-3.5 text-primary" />
+                    <span className="truncate max-w-[160px]">{filters.fromLocation}</span>
+                    <ArrowRight className="h-3 w-3 shrink-0" />
+                    <MapPin className="h-3.5 w-3.5 text-primary" />
+                    <span className="truncate max-w-[160px]">{filters.toLocation}</span>
                   </div>
-                </div>
-              ))}
-            </div>
-          ) : results.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-              <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mb-4">
-                <AlertCircle className="h-10 w-10 text-muted-foreground" />
+                )}
               </div>
-              <h3 className="text-lg font-semibold text-foreground mb-2">
-                No Shuttles Found
-              </h3>
-              <p className="text-muted-foreground max-w-sm mb-6">
-                We couldn&lsquo;t find any shuttles matching your search
-                criteria. Please try different locations.
-              </p>
-              <Button variant="outline" onClick={onClose}>
-                Modify Search
-              </Button>
+              <button
+                onClick={onClose}
+                className="rounded-full p-2 hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
-          ) : (
-            <div className="space-y-4 py-2">
-              {results.map((result) => (
-                <motion.div
-                  key={result.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={cn(
-                    "bg-card border rounded-xl p-5 transition-all cursor-pointer hover:shadow-md",
-                    selectedId === result.id
-                      ? "border-primary ring-2 ring-primary/20"
-                      : "border-border hover:border-primary/50",
-                  )}
-                  onClick={() => handleSelect(result)}
-                >
-                  <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                          <Bus className="h-5 w-5 text-primary" />
-                        </div>
-                        <div>
-                          <h4 className="font-semibold text-foreground">
-                            {result.provider}
-                          </h4>
-                          <p className="text-sm text-muted-foreground">
-                            {result.vehicleType}
-                          </p>
-                        </div>
-                      </div>
 
-                      <div className="flex items-center gap-4 mb-3">
-                        <div className="text-center">
-                          <div className="font-bold text-foreground">
-                            {result.departureTime}
+            {/* Results list */}
+            <div className="overflow-y-auto px-6 py-4 space-y-3"
+              style={{ maxHeight: 'calc(90dvh - 100px)' }}
+            >
+              {isLoading ? (
+                <>
+                  <SkeletonCard />
+                  <SkeletonCard />
+                  <SkeletonCard />
+                </>
+              ) : results.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Bus className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                  <p className="font-medium">No shuttles found for this route</p>
+                  <p className="text-sm mt-1">Try a different origin or destination</p>
+                </div>
+              ) : (
+                <>
+                  {results.length === 1 ? null : (
+                    <p className="text-xs text-muted-foreground pb-1">
+                      No direct shuttle found for this exact route. Showing all available options.
+                    </p>
+                  )}
+
+                  {results.map((shuttle, idx) => (
+                    <motion.div
+                      key={shuttle.id}
+                      initial={{ opacity: 0, y: 16 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.06 }}
+                      className={cn(
+                        'group relative rounded-xl border border-border bg-card hover:border-primary/50',
+                        'hover:shadow-md transition-all duration-200 cursor-pointer overflow-hidden',
+                      )}
+                      onClick={() => onSelectResult(shuttle)}
+                    >
+                      {/* Availability indicator stripe */}
+                      <div
+                        className={cn(
+                          'absolute left-0 top-0 bottom-0 w-1 rounded-l-xl',
+                          shuttle.availableSeats <= 3
+                            ? 'bg-amber-400'
+                            : shuttle.availableSeats <= 8
+                              ? 'bg-emerald-400'
+                              : 'bg-primary',
+                        )}
+                      />
+
+                      <div className="pl-4 pr-5 py-4">
+                        <div className="flex items-start gap-3">
+                          {/* Icon */}
+                          <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+                            <Bus className="h-5 w-5 text-primary" />
                           </div>
-                          <div className="text-xs text-muted-foreground">
-                            Depart
-                          </div>
-                        </div>
-                        <div className="flex-1 flex items-center justify-center px-4">
-                          <div className="h-0.5 flex-1 bg-border relative">
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <Clock className="h-4 w-4 text-muted-foreground bg-card px-1" />
+
+                          {/* Main content */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <p className="font-semibold text-foreground leading-tight">
+                                  {shuttle.provider}
+                                </p>
+                                <span
+                                  className={cn(
+                                    'inline-block text-xs px-2 py-0.5 rounded-full font-medium mt-0.5',
+                                    vehicleTypeColor[shuttle.vehicleType] ??
+                                      'bg-muted text-muted-foreground',
+                                  )}
+                                >
+                                  {shuttle.vehicleType}
+                                </span>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <p className="text-xl font-bold text-primary leading-tight">
+                                  {shuttle.price.toLocaleString()}
+                                  <span className="text-xs font-normal text-muted-foreground ml-1">
+                                    FRw
+                                  </span>
+                                </p>
+                                <p className="text-xs text-muted-foreground">per person</p>
+                              </div>
+                            </div>
+
+                            {/* Times & duration */}
+                            <div className="flex items-center gap-3 mt-2.5 text-sm">
+                              <div className="flex items-center gap-1 text-foreground font-medium">
+                                <Clock className="h-3.5 w-3.5 text-primary" />
+                                {shuttle.departureTime}
+                              </div>
+                              <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                              <span className="text-foreground font-medium">
+                                {shuttle.arrivalTime}
+                              </span>
+                              <span className="text-muted-foreground text-xs">
+                                ({shuttle.duration})
+                              </span>
+                              {shuttle.distance && (
+                                <span className="text-muted-foreground text-xs ml-auto">
+                                  {shuttle.distance} km
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Seats & amenities */}
+                            <div className="flex items-center justify-between mt-2">
+                              <div className="flex flex-wrap gap-1.5">
+                                {shuttle.amenities.map((a) => (
+                                  <span
+                                    key={a}
+                                    className="inline-flex items-center gap-1 text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground"
+                                  >
+                                    {amenityIcons[a]}
+                                    {a}
+                                  </span>
+                                ))}
+                              </div>
+                              <div
+                                className={cn(
+                                  'flex items-center gap-1 text-xs font-medium shrink-0 ml-2',
+                                  shuttle.availableSeats <= 3
+                                    ? 'text-amber-600'
+                                    : 'text-emerald-600',
+                                )}
+                              >
+                                <Users className="h-3 w-3" />
+                                {shuttle.availableSeats <= 3
+                                  ? `Only ${shuttle.availableSeats} left`
+                                  : `${shuttle.availableSeats} seats`}
+                              </div>
                             </div>
                           </div>
                         </div>
-                        <div className="text-center">
-                          <div className="font-bold text-foreground">
-                            {result.arrivalTime}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            Arrive
-                          </div>
-                        </div>
-                        <div className="text-xs text-muted-foreground ml-2">
-                          {result.duration}
-                        </div>
-                      </div>
 
-                      <div className="flex flex-wrap gap-2">
-                        {result.amenities.map((amenity: any) => (
-                          <Badge
-                            key={amenity}
-                            variant="secondary"
-                            className="bg-muted text-muted-foreground flex items-center gap-1"
+                        {/* CTA row */}
+                        <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
+                          <p className="text-xs text-muted-foreground">
+                            Tap to select this shuttle
+                          </p>
+                          <Button
+                            size="sm"
+                            className="h-8 text-xs gap-1 group-hover:gap-2 transition-all"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onSelectResult(shuttle);
+                            }}
                           >
-                            {amenityIcons[amenity]}
-                            <span>{amenity}</span>
-                          </Badge>
-                        ))}
-                        <Badge
-                          variant="outline"
-                          className="border-border text-muted-foreground flex items-center gap-1"
-                        >
-                          <Users className="h-3 w-3" />
-                          {result.availableSeats} seats left
-                        </Badge>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center gap-4 md:gap-2 md:min-w-[140px]">
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-primary">
-                          {result.price.toLocaleString()} FRw
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          per person
+                            Select
+                            <ArrowRight className="h-3 w-3" />
+                          </Button>
                         </div>
                       </div>
-                      <Button
-                        variant={
-                          selectedId === result.id ? "default" : "outline"
-                        }
-                        className={cn(
-                          "min-w-25",
-                          selectedId === result.id &&
-                            "bg-primary text-primary-foreground",
-                        )}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSelect(result);
-                        }}
-                      >
-                        {selectedId === result.id ? "Selected" : "Select"}
-                      </Button>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
+                    </motion.div>
+                  ))}
+                </>
+              )}
             </div>
-          )}
-        </ScrollArea>
-
-        {/* Fixed Footer */}
-        {results.length > 0 && (
-          <div className="border-t border-border p-6 bg-muted/50 shrink-0 space-y-4">
-            <div className="flex justify-between items-center">
-              <div className="text-sm text-muted-foreground">
-                {selectedId
-                  ? "1 item selected"
-                  : "Select a shuttle to continue"}
-              </div>
-              <div className="flex gap-3">
-                <Button variant="outline" onClick={onClose}>
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleBook}
-                  disabled={!selectedId}
-                  className="min-w-30"
-                >
-                  Continue to Book
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
   );
 }

@@ -39,7 +39,7 @@ export function WhyChooseUs() {
   const isInView = useInView(ref, { once: true, amount: 0.3 });
 
   return (
-    <section ref={ref} className="py-24 bg-background">
+    <section id="why-choose-us" ref={ref} className="py-24 bg-background">
       <div className={`mx-auto max-w-7xl ${containerPadding.default}`}>
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16">
           {/* Left Side - Headline & Description */}

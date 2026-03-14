@@ -2,6 +2,7 @@
 
 import { StatsCard } from '@/components/admin/StatsCard';
 import { RecentBookings } from '@/components/admin/Recentbookings';
+import { BookingStatusPieChart } from '@/components/admin/BookingStatusPieChart';
 import { BookOpen, CreditCard, Car, Users, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { useDashboardStats, useRecentBookings } from '@/hooks/useDashboard';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -10,21 +11,7 @@ export default function DashboardPage() {
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
   const { data: recentBookings, isLoading: recentLoading } = useRecentBookings(5);
 
-  const mockStats = {
-    totalBookings: 1284,
-    totalRevenue: 48295000, 
-    activeVehicles: 42,
-    totalCustomers: 5920,
-    pendingBookings: 23,
-    confirmedBookings: 156,
-    completedBookings: 1105,
-    cancelledBookings: 18,
-    revenueChange: 12.5,
-    bookingsChange: 8.2,
-    customersChange: 5.4,
-  };
-
-  const displayStats = stats || mockStats;
+  const displayStats = stats;
 
   const formatCurrency = (value: number) => {
     return `${(value / 1000).toFixed(0)}K FRw`;
@@ -49,7 +36,7 @@ export default function DashboardPage() {
             <Skeleton className="h-32 rounded-2xl" />
             <Skeleton className="h-32 rounded-2xl" />
           </>
-        ) : (
+        ) : displayStats ? (
           <>
             <StatsCard
               title="Total Bookings"
@@ -75,8 +62,18 @@ export default function DashboardPage() {
               icon={Users}
             />
           </>
+        ) : (
+          <>
+            <StatsCard title="Total Bookings" value="—" icon={BookOpen} />
+            <StatsCard title="Total Revenue" value="—" icon={CreditCard} />
+            <StatsCard title="Active Vehicles" value="—" icon={Car} />
+            <StatsCard title="Total Customers" value="—" icon={Users} />
+          </>
         )}
       </div>
+
+      {/* Pie chart: bookings by status */}
+      <BookingStatusPieChart stats={displayStats} isLoading={statsLoading} />
 
       {/* Status summary */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -86,7 +83,7 @@ export default function DashboardPage() {
             <span className="text-xs font-medium text-amber-600 uppercase">Pending</span>
           </div>
           <div className="text-2xl font-bold text-amber-700">
-            {statsLoading ? <Skeleton className="h-8 w-16" /> : displayStats.pendingBookings}
+            {statsLoading ? <Skeleton className="h-8 w-16" /> : displayStats?.pendingBookings ?? "—"}
           </div>
         </div>
         <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
@@ -95,7 +92,7 @@ export default function DashboardPage() {
             <span className="text-xs font-medium text-emerald-600 uppercase">Confirmed</span>
           </div>
           <div className="text-2xl font-bold text-emerald-700">
-            {statsLoading ? <Skeleton className="h-8 w-16" /> : displayStats.confirmedBookings}
+            {statsLoading ? <Skeleton className="h-8 w-16" /> : displayStats?.confirmedBookings ?? "—"}
           </div>
         </div>
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
@@ -104,7 +101,7 @@ export default function DashboardPage() {
             <span className="text-xs font-medium text-blue-600 uppercase">Completed</span>
           </div>
           <div className="text-2xl font-bold text-blue-700">
-            {statsLoading ? <Skeleton className="h-8 w-16" /> : displayStats.completedBookings}
+            {statsLoading ? <Skeleton className="h-8 w-16" /> : displayStats?.completedBookings ?? "—"}
           </div>
         </div>
         <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
@@ -113,7 +110,7 @@ export default function DashboardPage() {
             <span className="text-xs font-medium text-gray-600 uppercase">Cancelled</span>
           </div>
           <div className="text-2xl font-bold text-gray-700">
-            {statsLoading ? <Skeleton className="h-8 w-16" /> : displayStats.cancelledBookings}
+            {statsLoading ? <Skeleton className="h-8 w-16" /> : displayStats?.cancelledBookings ?? "—"}
           </div>
         </div>
       </div>

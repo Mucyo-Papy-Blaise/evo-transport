@@ -14,7 +14,6 @@ const BRAND_COLOR = getBrandColor();
 
 // Booking Email Templates for EVO Transport
 export const BOOKING_TEMPLATES = {
-  // Customer booking confirmation (sent immediately after booking)
   BOOKING_CONFIRMATION: (data: {
     customerName: string;
     bookingReference: string;
@@ -654,5 +653,277 @@ export const BOOKING_TEMPLATES = {
         </p>
       </div>
     `;
+  },
+
+  LONG_DISTANCE_REQUEST_ADMIN: (data: {
+    adminName: string;
+    customerName: string;
+    customerEmail: string;
+    customerPhone: string;
+    userType: string;
+    isRegisteredUser: string;
+    isGuestUser: string;
+    requestId: string;
+    bookingId: string;
+    fromLocation: string;
+    toLocation: string;
+    fromCode: string;
+    toCode: string;
+    fromCity: string;
+    toCity: string;
+    distance: string;
+    isLongDistance: string;
+    departureDate: string;
+    departureTime: string;
+    returnDate: string;
+    returnTime: string;
+    totalPassengers: string;
+    passengerSummary: string;
+    passengerList: string;
+    message: string;
+    adminResponseUrl: string;
+    requestedAt: string;
+    platformName?: string;
+  }): string => {
+    const routeDisplay = `${data.fromCode} → ${data.toCode} (${data.distance}km)`;
+
+    return `
+    <div style="color: #374151; font-family: Arial, sans-serif;">
+      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px 20px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 28px;">🚌 Long Distance Trip Request</h1>
+        <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">Action Required - Admin Response Needed</p>
+      </div>
+      
+      <div style="padding: 30px; background: #ffffff;">
+        <p>Dear ${data.adminName},</p>
+        
+        <p>A new <strong>long distance trip request</strong> has been submitted that requires your attention.</p>
+        
+        ${createHighlightBox('Request Information', {
+          'Request ID': data.requestId,
+          'Customer Type': data.userType,
+          Distance: `${data.distance} km (Over 400km)`,
+          Submitted: data.requestedAt,
+        })}
+        
+        <h3 style="color: #4F46E5; margin: 30px 0 20px 0; font-size: 18px;">👤 Customer Details</h3>
+        
+        ${createTwoColumnLayout(
+          [
+            { label: 'Name', value: data.customerName },
+            { label: 'Email', value: data.customerEmail },
+          ],
+          [
+            { label: 'Phone', value: data.customerPhone },
+            { label: 'Type', value: data.userType },
+          ],
+        )}
+        
+        <h3 style="color: #4F46E5; margin: 30px 0 20px 0; font-size: 18px;">📍 Trip Details</h3>
+        
+        ${createTwoColumnLayout(
+          [
+            { label: 'Route', value: routeDisplay },
+            { label: 'From', value: `${data.fromLocation} (${data.fromCode})` },
+          ],
+          [
+            { label: 'To', value: `${data.toLocation} (${data.toCode})` },
+            {
+              label: 'Distance',
+              value: `<strong style="color: #DC2626;">${data.distance} km</strong>`,
+            },
+          ],
+        )}
+        
+        ${createTwoColumnLayout(
+          [
+            {
+              label: 'Departure',
+              value: `${data.departureDate} at ${data.departureTime}`,
+            },
+            {
+              label: 'Return',
+              value:
+                data.returnDate !== 'One-way trip'
+                  ? `${data.returnDate} at ${data.returnTime}`
+                  : 'One-way trip',
+            },
+          ],
+          [
+            { label: 'Total Passengers', value: data.totalPassengers },
+            {
+              label: 'Trip Type',
+              value:
+                data.returnDate !== 'One-way trip' ? 'Round Trip' : 'One Way',
+            },
+          ],
+        )}
+        
+        <h3 style="color: #4F46E5; margin: 30px 0 20px 0; font-size: 18px;">👥 Passenger Summary</h3>
+        
+        <div style="background: #F3F4F6; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+          <pre style="margin: 0; font-family: monospace; color: #374151;">${data.passengerSummary}</pre>
+        </div>
+        
+        <h4 style="color: #374151; margin: 20px 0 10px 0;">Passenger List:</h4>
+        <div style="background: #F9FAFB; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+          <pre style="margin: 0; font-family: monospace; color: #4B5563; font-size: 13px;">${data.passengerList}</pre>
+        </div>
+        
+        ${
+          data.message !== 'No special requests'
+            ? createInfoBox(`
+          <p style="margin: 0; font-weight: 500;">📝 Special Requests:</p>
+          <p style="margin: 8px 0 0 0; color: #6B7280;">${data.message}</p>
+        `)
+            : ''
+        }
+        
+        <div style="text-align: center; margin: 40px 0 20px 0;">
+          <a href="${data.adminResponseUrl}" 
+             style="background: #4F46E5; color: white; padding: 14px 32px; 
+                    text-decoration: none; border-radius: 8px; font-weight: bold;
+                    display: inline-block; font-size: 16px;">
+            ⚡ Respond to Request
+          </a>
+        </div>
+        
+        ${createInfoBox(`
+          <p style="margin: 0; font-weight: 500;">⏰ Response Guidelines:</p>
+          <ul style="margin: 8px 0 0 0; color: #6B7280;">
+            <li>Acknowledge receipt within 2 hours</li>
+            <li>Provide pricing and availability within 24 hours</li>
+            <li>Special rates may apply for long distance trips</li>
+          </ul>
+        `)}
+        
+        <p style="margin-top: 30px;">
+          Best regards,<br>
+          <strong>EVO Transport System</strong>
+        </p>
+        
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #E5E7EB;" />
+        
+        <p style="font-size: 12px; color: #9CA3AF; text-align: center;">
+          Request ID: ${data.requestId} | Booking ID: ${data.bookingId}<br>
+          This is an automated notification. Please respond through the admin panel.
+        </p>
+      </div>
+    </div>
+  `;
+  },
+
+  // LONG_DISTANCE_REQUEST_CUSTOMER - Email sent to customers
+  LONG_DISTANCE_REQUEST_CUSTOMER: (data: {
+    customerName: string;
+    requestId: string;
+    fromLocation: string;
+    toLocation: string;
+    fromCode: string;
+    toCode: string;
+    distance: number;
+    supportEmail: string;
+    responseTime: string;
+    dashboardUrl: string;
+    userType: string;
+    platformName?: string;
+  }): string => {
+    const routeDisplay = `${data.fromCode} → ${data.toCode}`;
+
+    return `
+    <div style="color: #374151; font-family: Arial, sans-serif;">
+      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px 20px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 28px;">✈️ Long Distance Request Received</h1>
+        <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">We'll get back to you within ${data.responseTime}</p>
+      </div>
+      
+      <div style="padding: 30px; background: #ffffff;">
+        <p>Dear ${data.customerName},</p>
+        
+        <p>
+          Thank you for choosing <strong>${getPlatformName(data)}</strong> for your long distance journey. 
+          We've received your request and our team will review it shortly.
+        </p>
+        
+        ${createHighlightBox('Request Reference', {
+          'Request ID': data.requestId,
+          Status: '⏳ Pending Review',
+          'Response Time': data.responseTime,
+        })}
+        
+        <div style="background: #FEF3C7; border-left: 4px solid #F59E0B; padding: 20px; margin: 20px 0;">
+          <p style="margin: 0; font-weight: 500; color: #92400E;">📏 Long Distance Notice</p>
+          <p style="margin: 8px 0 0 0; color: #B45309;">
+            Your journey is <strong>${data.distance} km</strong>. Since this exceeds 400 km, 
+            our admin team will provide you with special rates and options.
+          </p>
+        </div>
+        
+        <h3 style="color: #4F46E5; margin: 30px 0 20px 0; font-size: 18px;">📍 Trip Summary</h3>
+        
+        ${createTwoColumnLayout(
+          [
+            { label: 'Route', value: routeDisplay },
+            { label: 'From', value: data.fromLocation },
+          ],
+          [
+            { label: 'To', value: data.toLocation },
+            {
+              label: 'Distance',
+              value: `<strong>${data.distance} km</strong>`,
+            },
+          ],
+        )}
+        
+        <div style="background: #E0F2FE; border-radius: 8px; padding: 20px; margin: 30px 0;">
+          <h4 style="color: #0369A1; margin: 0 0 15px 0; font-size: 16px;">⏱️ What happens next?</h4>
+          <ol style="margin: 0; padding-left: 20px; color: #075985;">
+            <li style="margin-bottom: 10px;">Our admin team reviews your long distance request</li>
+            <li style="margin-bottom: 10px;">We calculate special rates for your ${data.distance}km journey</li>
+            <li style="margin-bottom: 10px;">You'll receive an email with available options and pricing</li>
+            <li>Once confirmed, we'll proceed with your booking</li>
+          </ol>
+        </div>
+        
+        ${
+          data.userType === 'registered'
+            ? `
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${data.dashboardUrl}" 
+               style="background: #4F46E5; color: white; padding: 12px 28px; 
+                      text-decoration: none; border-radius: 8px; font-weight: bold;
+                      display: inline-block;">
+              📊 Track Request in Dashboard
+            </a>
+          </div>
+        `
+            : `
+          ${createInfoBox(`
+            <p style="margin: 0; font-weight: 500;">🔍 Track your request</p>
+            <p style="margin: 8px 0 0 0; color: #6B7280;">
+              Save your request ID: <strong>${data.requestId}</strong>. You'll need this for any inquiries.
+            </p>
+          `)}
+        `
+        }
+        
+        <p style="margin-top: 30px;">
+          Need to make changes or have questions? Contact our support team.
+        </p>
+        
+        <p style="margin-top: 20px;">
+          We appreciate your patience!<br>
+          <strong>The ${getPlatformName(data)} Team</strong>
+        </p>
+        
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #E5E7EB;" />
+        
+        <p style="font-size: 12px; color: #9CA3AF; text-align: center;">
+          Request ID: ${data.requestId} | 
+          For assistance: <a href="mailto:${data.supportEmail}" style="color: #4F46E5;">${data.supportEmail}</a>
+        </p>
+      </div>
+    </div>
+  `;
   },
 };

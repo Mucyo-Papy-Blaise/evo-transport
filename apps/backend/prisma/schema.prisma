@@ -65,6 +65,7 @@ enum TripType {
 model User {
   id              String          @id @default(cuid())
   email           String          @unique
+  phone           String?
   passwordHash    String?        
   firstName       String?
   lastName        String?
@@ -182,7 +183,8 @@ model Booking {
   fromCode        String?   
   toCode          String?      
   fromCity        String?      
-  toCity          String?   
+  toCity          String?
+  message         String?   
   
   // Date and Time
   departureDate   DateTime

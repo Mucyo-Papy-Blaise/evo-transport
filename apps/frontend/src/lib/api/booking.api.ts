@@ -9,6 +9,46 @@ import {
   BookingFilterParams,
 } from "@/types/booking.types";
 
+export interface LongDistanceRequest {
+  // Contact
+  guestEmail?: string;
+  guestName?: string;
+  guestPhone: string;
+
+  // Route
+  fromLocation: string;
+  toLocation: string;
+  fromCode?: string;
+  toCode?: string;
+  fromCity?: string;
+  toCity?: string;
+
+  // Trip
+  tripType: "ONE_WAY" | "ROUND_TRIP";
+  departureDate: string;
+  returnDate?: string;
+  departureTime: string;
+  returnTime?: string;
+  passengerDetails: Array<{
+    type: string;
+    age: number;
+    requiresAssistance: boolean;
+    assistanceType?: string;
+  }>;
+  price: number;
+  currency?: string;
+
+  // Long distance specific
+  distance: number;
+  message?: string; // Customer's special request message
+}
+
+export interface LongDistanceResponse {
+  id: string;
+  bookingReference: string;
+  message: string;
+}
+
 export const bookingApi = {
   // Create a new booking
   createBooking: (data: CreateBookingRequest) =>
@@ -22,8 +62,6 @@ export const bookingApi = {
       if (params.status) {
         queryParams.append("status", params.status);
       }
-
-      // Handle other params
       if (params.fromDate) queryParams.append("fromDate", params.fromDate);
       if (params.toDate) queryParams.append("toDate", params.toDate);
       if (params.search) queryParams.append("search", params.search);
@@ -81,4 +119,8 @@ export const bookingApi = {
   // Cancel booking
   cancelBooking: (id: string, reason?: string) =>
     apiClient.post<Booking>(`/bookings/${id}/cancel`, { reason }),
+
+  // Submit a long-distance request (>400 km)
+  sendLongDistanceRequest: (data: LongDistanceRequest) =>
+    apiClient.post<LongDistanceResponse>("/bookings/long-distance", data),
 };

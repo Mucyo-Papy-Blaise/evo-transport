@@ -2,8 +2,6 @@ import { Header } from '@/components/landing/Header';
 import { Hero } from '@/components/landing/Hero';
 import { WhyChooseUs } from '@/components/landing/WhyChooseUs';
 import { PopularRoutes } from '@/components/landing/PopularRoutes';
-// import { Steps } from '@/components/landing/Steps';
-// import { Insights } from '@/components/landing/Insights';
 import { Footer } from '@/components/landing/Footer';
 import { TrackBooking } from '@/components/landing/TrackBooking';
 
@@ -14,8 +12,6 @@ export default function LandingPage() {
       <Hero />
       <WhyChooseUs />
       <PopularRoutes />
-      {/* <Steps /> */}
-      {/* <Insights /> */}
        <TrackBooking />
       <Footer />
     </main>

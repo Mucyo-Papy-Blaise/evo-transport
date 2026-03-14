@@ -415,6 +415,50 @@ export default function BookingDetailsPage() {
                   {booking.passengers > 1 ? "passengers" : "passenger"}
                 </Badge>
               </div>
+
+              {/* Passenger details from API */}
+              {(booking.passengerSummary || (booking.passengerDetails && booking.passengerDetails.length > 0)) && (
+                <div className="mt-4 p-4 rounded-lg border border-border bg-muted/20 space-y-2">
+                  <div className="text-sm font-medium text-foreground">Passenger breakdown</div>
+                  {booking.passengerSummary && (
+                    <div className="flex flex-wrap gap-2 text-xs">
+                      {booking.passengerSummary.adultCount > 0 && (
+                        <Badge variant="secondary">Adults: {booking.passengerSummary.adultCount}</Badge>
+                      )}
+                      {booking.passengerSummary.childCount > 0 && (
+                        <Badge variant="secondary">Children: {booking.passengerSummary.childCount}</Badge>
+                      )}
+                      {booking.passengerSummary.infantCount > 0 && (
+                        <Badge variant="secondary">Infants: {booking.passengerSummary.infantCount}</Badge>
+                      )}
+                      {booking.passengerSummary.seniorCount > 0 && (
+                        <Badge variant="secondary">Seniors: {booking.passengerSummary.seniorCount}</Badge>
+                      )}
+                      {booking.passengerSummary.requiresAssistanceCount > 0 && (
+                        <Badge variant="outline" className="text-amber-600 border-amber-300">
+                          Wheelchair/assistance: {booking.passengerSummary.requiresAssistanceCount}
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+                  {booking.passengerDetails && booking.passengerDetails.length > 0 && (
+                    <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+                      {booking.passengerDetails.map((p: { type?: string; age?: number; requiresAssistance?: boolean; assistanceType?: string; specialNeeds?: string }, i: number) => (
+                        <li key={i} className="flex items-center gap-2">
+                          <span className="capitalize">{p.type}</span>
+                          {p.age != null && <span>(age {p.age})</span>}
+                          {p.requiresAssistance && (
+                            <Badge variant="outline" className="text-[10px]">
+                              {p.assistanceType || "Assistance"}
+                            </Badge>
+                          )}
+                          {p.specialNeeds && <span>— {p.specialNeeds}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 

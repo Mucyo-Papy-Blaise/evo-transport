@@ -1,10 +1,11 @@
 import { BookingStatus, Currency, TripType, UserType } from "./enum";
+import type { PassengerDetail } from "./passenger.types";
 
 export interface CreateBookingRequest {
   guestEmail?: string;
   guestName?: string;
-  guestPhone?: string;
-  
+  guestPhone: string;
+
   // Booking details
   tripType: TripType;
   fromLocation: string;
@@ -13,11 +14,11 @@ export interface CreateBookingRequest {
   toCode?: string;
   fromCity?: string;
   toCity?: string;
-  departureDate: string; 
-  returnDate?: string;    
-  departureTime: string;  
-  returnTime?: string;  
-  passengers: number;
+  departureDate: string;
+  returnDate?: string;
+  departureTime: string;
+  returnTime?: string;
+  passengerDetails: PassengerDetail[];
   price: number;
   currency?: Currency;
 }
@@ -67,22 +68,30 @@ export interface Booking {
   departureTime: string;
   returnTime: string | null;
   passengers: number;
-  
+  passengerDetails?: PassengerDetail[];
+  passengerSummary?: {
+    adultCount: number;
+    childCount: number;
+    infantCount: number;
+    seniorCount: number;
+    requiresAssistanceCount: number;
+  };
+
   // Pricing
   price: number;
   currency: Currency;
-  
+
   // Status
   status: BookingStatus;
   adminNotes: string | null;
   adminRespondedAt: string | null;
   adminRespondedBy: string | null;
-  
+
   // Timestamps
   createdAt: string;
   confirmedAt: string | null;
   cancelledAt: string | null;
-  
+
   // User object if registered
   user?: BookingUser | null;
 }

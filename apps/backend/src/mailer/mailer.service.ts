@@ -1,8 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import {
-  ISendMailOptions,
-  MailerService as NestMailerService,
-} from '@nestjs-modules/mailer';
+import { ConfigService } from '@nestjs/config';
+import { Resend } from 'resend';
 import {
   MailerOptions,
   EmailLog,
@@ -12,7 +10,7 @@ import {
 } from './types/mailer';
 import { TemplateService } from './templates/template.service';
 
-// Handles email sending with queue management, retries, and bulk operations
+// Handles email sending via Resend HTTP API (faster than SMTP)
 @Injectable()
 export class MailerService {
   private readonly logger = new Logger(MailerService.name);
@@ -22,11 +20,24 @@ export class MailerService {
   private readonly RETRY_DELAYS = [10000, 30000, 60000]; // 10s, 30s, 60s
   private emailQueue: Array<() => Promise<void>> = [];
   private isProcessingQueue = false;
+  private readonly resend: Resend;
+  private readonly from: string;
 
   constructor(
-    private readonly nestMailerService: NestMailerService,
+    private readonly configService: ConfigService,
     private readonly templateService: TemplateService,
-  ) {}
+  ) {
+    const apiKey = this.configService.getOrThrow<string>('RESEND_API_KEY');
+    this.resend = new Resend(apiKey);
+    const fromName = this.configService.get<string>(
+      'MAIL_FROM_NAME',
+      'EVO TRANSPORT',
+    );
+    const fromAddress = this.configService.get<string>('MAIL_FROM_ADDRESS');
+    this.from = fromAddress
+      ? `${fromName} <${fromAddress}>`
+      : `${fromName} <onboarding@resend.dev>`;
+  }
 
   // Send email using predefined template
   async sendTemplatedEmail(
@@ -80,22 +91,13 @@ export class MailerService {
     return new Promise((resolve) => {
       const task = async () => {
         try {
-          const mailOptions: ISendMailOptions = {
-            to: options.to,
-            subject: options.subject,
-            html: options.html,
-            attachments: options.attachments,
-          };
-
           this.logger.debug('Attempting to send email:', {
             to: Array.isArray(options.to) ? options.to.join(', ') : options.to,
             subject: options.subject,
             hasAttachments: !!options.attachments?.length,
           });
 
-          // Use retry mechanism
           const success = await this.sendMailWithRetry(
-            mailOptions,
             options,
             this.MAX_RETRIES,
           );
@@ -323,17 +325,33 @@ export class MailerService {
     }
   }
 
-  // Send email with retry mechanism
+  // Send email via Resend HTTP API with retry
   private async sendMailWithRetry(
-    mailOptions: ISendMailOptions,
     options: MailerOptions,
     maxRetries: number,
   ): Promise<boolean> {
     let lastError: Error | null = null;
+    const to = Array.isArray(options.to) ? options.to : [options.to];
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
-        await this.nestMailerService.sendMail(mailOptions);
+        const payload: Parameters<Resend['emails']['send']>[0] = {
+          from: this.from,
+          to,
+          subject: options.subject,
+          html: options.html ?? '',
+        };
+        if (options.attachments?.length) {
+          payload.attachments = options.attachments.map((a) => ({
+            filename: a.filename,
+            content:
+              typeof a.content === 'string'
+                ? Buffer.from(a.content)
+                : a.content,
+          }));
+        }
+        const { error } = await this.resend.emails.send(payload);
+        if (error) throw new Error(error.message);
 
         this.logEmail({
           success: true,
@@ -350,7 +368,7 @@ export class MailerService {
 
         if (attempt > 0) {
           this.logger.log(
-            `Email sent on retry attempt ${attempt + 1} (${Array.isArray(options.to) ? options.to.join(', ') : options.to})`,
+            `Email sent on retry attempt ${attempt + 1} (${to.join(', ')})`,
           );
         }
 
@@ -363,10 +381,8 @@ export class MailerService {
           this.logger.error(
             `Email failed${attempt > 0 ? ` after ${attempt + 1} attempts` : ''}:`,
             {
-              error: error instanceof Error ? error.message : 'Unknown error',
-              to: Array.isArray(options.to)
-                ? options.to.join(', ')
-                : options.to,
+              error: lastError.message,
+              to: to.join(', '),
               retryable: isRetryable,
             },
           );

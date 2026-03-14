@@ -16,7 +16,6 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
-  ApiQuery,
 } from '@nestjs/swagger';
 import { BookingService } from './booking.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
@@ -34,6 +33,10 @@ import { Roles } from 'src/common/decorators/roles.decorator';
 import { Public } from 'src/common/decorators/public.decorator';
 import { CurrentUser } from 'src/common/decorators/user.decorator';
 import { UserRole } from '@prisma/client';
+import {
+  LongDistanceRequestDto,
+  LongDistanceResponseDto,
+} from './dto/long-distance-request.dto';
 
 @ApiTags('bookings')
 @Controller('bookings')
@@ -97,15 +100,6 @@ export class BookingController {
     return this.bookingService.getBookingByReference(reference);
   }
 
-  @Get('popular-routes')
-  @Public()
-  @ApiOperation({ summary: 'Get popular routes based on booking history' })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiResponse({ status: HttpStatus.OK })
-  async getPopularRoutes(@Query('limit') limit?: number) {
-    return this.bookingService.getPopularRoutes(limit || 6);
-  }
-
   @Get(':id')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
@@ -159,5 +153,41 @@ export class BookingController {
     @Body() dto: AdminRespondDto,
   ): Promise<MessageResponseDto> {
     return this.bookingService.adminRespond(id, adminId, dto);
+  }
+
+  @Post('long-distance')
+  @Public()
+  @ApiOperation({
+    summary:
+      'Submit a long distance request (>400km) - works for both guests and registered users',
+  })
+  @ApiResponse({ status: HttpStatus.CREATED, type: LongDistanceResponseDto })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Invalid input or distance <= 400km',
+  })
+  async sendLongDistanceRequest(
+    @Request() req,
+    @Body() dto: LongDistanceRequestDto,
+  ) {
+    const userId = req.user?.id || null;
+    const guestSessionId = req.headers['x-guest-session-id'] || null;
+
+    return this.bookingService.sendEmailOverDistance(
+      userId,
+      guestSessionId,
+      dto,
+      dto.distance,
+    );
+  }
+
+  @Get('long-distance')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get all long distance requests (admin only)' })
+  @ApiResponse({ status: HttpStatus.OK, type: BookingListResponseDto })
+  getLongDistanceRequests(@Query() filter: BookingFilterDto) {
+    return this.bookingService.getLongDistanceRequests(filter);
   }
 }

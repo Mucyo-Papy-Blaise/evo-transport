@@ -3,6 +3,8 @@ export interface SearchFilters {
   toLocation: string;
   fromCode: string;
   toCode: string;
+  departureDate?: string;
+  passengers?: number;
 }
 
 export interface SearchResult {
@@ -37,3 +39,4 @@ export interface BookingDetails {
   returnTime?: string;
   passengers: number;
 }
+

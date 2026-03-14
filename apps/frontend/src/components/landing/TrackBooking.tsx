@@ -63,7 +63,7 @@ export function TrackBooking() {
   };
 
   return (
-    <section className="py-24 bg-linear-to-b from-background to-muted/30">
+    <section id="track-booking" className="py-24 bg-linear-to-b from-background to-muted/30">
       <div className="container max-w-4xl mx-auto px-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
