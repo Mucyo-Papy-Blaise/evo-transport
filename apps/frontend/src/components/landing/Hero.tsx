@@ -1,78 +1,62 @@
 // components/landing/Hero.tsx
 'use client';
 
-import { useState } from 'react';
-import Image from 'next/image';
-import { motion } from 'framer-motion';
-import { useRouter } from 'next/navigation';
-import { format, startOfDay } from 'date-fns';
-import { containerPadding } from '@/lib/constants/layout';
-import {
-  MapPin,
-  ArrowLeftRight,
-  CalendarIcon,
-  Users,
-  AlertTriangle,
-} from 'lucide-react';
+import { useState } from "react";
+import Image from "next/image";
+import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
+import { containerPadding } from "@/lib/constants/layout";
+import { MapPin, ArrowLeftRight, AlertTriangle, Ruler } from "lucide-react";
 
 // Shadcn UI Components
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
+} from "@/components/ui/select";
 
-// Modals
-import { SearchResultsModal } from '@/components/booking/SearchResultsModal';
-import { LongDistanceModal } from '@/components/booking/LongDistanceModal';
+// Components
+import { SearchResultsModal } from "@/components/booking/SearchResultsModal";
+import { SearchFilters } from "@/types";
+import { useAuth } from "@/lib/auth/auth-context";
+import { cn } from "@/utils/utils";
 
-// Types & mock data
-import type { SearchFilters } from '@/types';
-import type { Shuttle } from '@/lib/mock-data';
-import { locations, getRouteDistance, isLongDistance } from '@/lib/mock-data';
-import { useAuth } from '@/lib/auth/auth-context';
-import { cn } from '@/utils/utils';
+// Mock data
+import { locations, getRouteDistance, isLongDistance } from "@/lib/mock-data";
 
 export function Hero() {
   const router = useRouter();
   const { user } = useAuth();
 
-  // Search form state
   const [fromLocation, setFromLocation] = useState(locations[0].code);
-  const [toLocation, setToLocation] = useState(locations[2].code); // default to a different location
-  const [departureDate, setDepartureDate] = useState<Date>(new Date());
-  const [passengers, setPassengers] = useState(1);
-  const [dateOpen, setDateOpen] = useState(false);
+  const [toLocation, setToLocation] = useState(locations[2].code);
 
-  // Modal states
+  // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isLongDistanceModalOpen, setIsLongDistanceModalOpen] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [searchFilters, setSearchFilters] = useState<SearchFilters | null>(null);
   const [distance, setDistance] = useState(0);
 
-  // Swap from/to
+  // Live distance as user selects locations
+  const liveDistance = getRouteDistance(fromLocation, toLocation);
+  const liveIsLong = isLongDistance(liveDistance);
+  const sameLocation = fromLocation === toLocation;
+
   const handleSwap = () => {
     setFromLocation(toLocation);
     setToLocation(fromLocation);
   };
 
   const handleSearch = () => {
+    if (sameLocation) return;
+
     const fromLoc = locations.find((l) => l.code === fromLocation);
     const toLoc = locations.find((l) => l.code === toLocation);
-
     if (!fromLoc || !toLoc) return;
-    if (fromLoc.code === toLoc.code) return; // same location — do nothing
 
     const routeDistance = getRouteDistance(fromLoc.code, toLoc.code);
     setDistance(routeDistance);
@@ -82,44 +66,31 @@ export function Hero() {
       toLocation: toLoc.name,
       fromCode: fromLoc.code,
       toCode: toLoc.code,
-      departureDate: format(departureDate, 'yyyy-MM-dd'),
-      passengers,
     });
 
-    if (isLongDistance(routeDistance)) {
-      setIsLongDistanceModalOpen(true);
-    } else {
-      setIsModalOpen(true);
-      setIsSearching(true);
-      setTimeout(() => setIsSearching(false), 1200);
-    }
+    // Always open shuttle search modal — long distance check happens on booking page
+    setIsModalOpen(true);
+    setIsSearching(true);
+    setTimeout(() => setIsSearching(false), 1300);
   };
 
-  const handleSelectResult = (shuttle: Shuttle) => {
+  const handleSelectResult = (result: any) => {
     setIsModalOpen(false);
 
     sessionStorage.setItem(
-      'selectedRoute',
+      "selectedRoute",
       JSON.stringify({
         fromLocation: searchFilters?.fromLocation,
         toLocation: searchFilters?.toLocation,
         fromCode: searchFilters?.fromCode,
         toCode: searchFilters?.toCode,
         distance,
-        shuttle: {
-          ...shuttle,
-          // pass through the passenger count so booking page can pre-fill
-          selectedPassengers: passengers,
-        },
-      }),
+        shuttle: result,
+      })
     );
 
-    router.push('/booking');
+    router.push("/booking");
   };
-
-  // Derive current route distance to show indicator on the form in real-time
-  const currentDistance = getRouteDistance(fromLocation, toLocation);
-  const currentIsLong = isLongDistance(currentDistance);
 
   return (
     <>
@@ -138,7 +109,8 @@ export function Hero() {
 
         <div className={`mx-auto max-w-7xl w-full ${containerPadding.default} relative z-10`}>
           <div className="grid lg:grid-cols-2 gap-12 items-center">
-            {/* Left: headline */}
+
+            {/* Left — headline */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
@@ -155,7 +127,7 @@ export function Hero() {
               </p>
             </motion.div>
 
-            {/* Right: search card */}
+            {/* Right — search card */}
             <motion.div
               initial={{ opacity: 0, x: 30 }}
               animate={{ opacity: 1, x: 0 }}
@@ -166,178 +138,126 @@ export function Hero() {
                 Find Your Shuttle
               </h2>
 
-              {/* From / To with swap */}
-              <div className="relative mb-6">
-                <div className="space-y-3">
-                  {/* From */}
-                  <div>
-                    <Label className="text-sm font-medium mb-1.5 block text-muted-foreground">
-                      From
-                    </Label>
-                    <Select value={fromLocation} onValueChange={setFromLocation}>
-                      <SelectTrigger className="w-full h-12">
-                        <MapPin className="h-4 w-4 text-primary mr-2 shrink-0" />
-                        <SelectValue placeholder="Select departure" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {locations.map((loc) => (
-                          <SelectItem key={loc.code} value={loc.code}>
-                            <div className="flex flex-col py-0.5">
-                              <span className="font-medium">{loc.name}</span>
-                              <span className="text-xs text-muted-foreground">{loc.city}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Swap button */}
-                  <div className="flex justify-center -my-1">
-                    <button
-                      onClick={handleSwap}
-                      className="w-8 h-8 rounded-full bg-primary/10 hover:bg-primary/20 flex items-center justify-center transition-colors border border-primary/20"
-                      title="Swap locations"
-                    >
-                      <ArrowLeftRight className="h-3.5 w-3.5 text-primary" />
-                    </button>
-                  </div>
-
-                  {/* To */}
-                  <div>
-                    <Label className="text-sm font-medium mb-1.5 block text-muted-foreground">
-                      To
-                    </Label>
-                    <Select value={toLocation} onValueChange={setToLocation}>
-                      <SelectTrigger className="w-full h-12">
-                        <MapPin className="h-4 w-4 text-primary mr-2 shrink-0" />
-                        <SelectValue placeholder="Select destination" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {locations.map((loc) => (
-                          <SelectItem key={loc.code} value={loc.code}>
-                            <div className="flex flex-col py-0.5">
-                              <span className="font-medium">{loc.name}</span>
-                              <span className="text-xs text-muted-foreground">{loc.city}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+              {/* From */}
+              <div className="mb-3">
+                <Label className="text-sm font-medium mb-2 block text-muted-foreground">
+                  From
+                </Label>
+                <Select value={fromLocation} onValueChange={setFromLocation}>
+                  <SelectTrigger className="w-full h-14">
+                    <MapPin className="h-5 w-5 text-primary mr-2 shrink-0" />
+                    <SelectValue placeholder="Select departure location" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {locations.map((loc) => (
+                      <SelectItem key={loc.code} value={loc.code}>
+                        <div className="flex flex-col py-1">
+                          <span className="font-medium">{loc.name}</span>
+                          <span className="text-xs text-muted-foreground">{loc.city}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
-              {/* Distance indicator */}
-              {currentDistance > 0 && (
-                <motion.div
-                  key={`${fromLocation}-${toLocation}`}
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className={cn(
-                    'mb-4 flex items-center gap-2 text-xs px-3 py-2 rounded-lg',
-                    currentIsLong
-                      ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
-                      : 'bg-muted text-muted-foreground',
-                  )}
+              {/* Swap */}
+              <div className="flex justify-center my-1">
+                <button
+                  onClick={handleSwap}
+                  className="w-8 h-8 rounded-full bg-primary/10 hover:bg-primary/20 border border-primary/20 flex items-center justify-center transition-colors"
+                  title="Swap locations"
                 >
-                  {currentIsLong && <AlertTriangle className="h-3.5 w-3.5 shrink-0" />}
-                  <span>
-                    {currentDistance} km
-                    {currentIsLong
-                      ? ' — long distance route, special arrangements needed'
-                      : ' route distance'}
-                  </span>
-                </motion.div>
-              )}
-
-              {/* Date & Passengers row */}
-              <div className="grid grid-cols-2 gap-3 mb-6">
-                {/* Date picker */}
-                <div>
-                  <Label className="text-sm font-medium mb-1.5 block text-muted-foreground">
-                    Date
-                  </Label>
-                  <Popover open={dateOpen} onOpenChange={setDateOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          'w-full h-12 justify-start text-left font-normal text-sm',
-                          !departureDate && 'text-muted-foreground',
-                        )}
-                      >
-                        <CalendarIcon className="h-4 w-4 text-primary mr-2 shrink-0" />
-                        {departureDate ? format(departureDate, 'MMM d') : 'Select date'}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={departureDate}
-                        onSelect={(d) => {
-                          if (d) {
-                            setDepartureDate(d);
-                            setDateOpen(false);
-                          }
-                        }}
-                        disabled={(date) => date < startOfDay(new Date())}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                {/* Passengers */}
-                <div>
-                  <Label className="text-sm font-medium mb-1.5 block text-muted-foreground">
-                    Passengers
-                  </Label>
-                  <Select
-                    value={passengers.toString()}
-                    onValueChange={(v) => setPassengers(parseInt(v, 10))}
-                  >
-                    <SelectTrigger className="w-full h-12">
-                      <Users className="h-4 w-4 text-primary mr-2 shrink-0" />
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
-                        <SelectItem key={n} value={n.toString()}>
-                          {n} {n === 1 ? 'passenger' : 'passengers'}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                  <ArrowLeftRight className="h-3.5 w-3.5 text-primary" />
+                </button>
               </div>
+
+              {/* To */}
+              <div className="mb-4">
+                <Label className="text-sm font-medium mb-2 block text-muted-foreground">
+                  To
+                </Label>
+                <Select value={toLocation} onValueChange={setToLocation}>
+                  <SelectTrigger className="w-full h-14">
+                    <MapPin className="h-5 w-5 text-primary mr-2 shrink-0" />
+                    <SelectValue placeholder="Select destination location" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {locations.map((loc) => (
+                      <SelectItem key={loc.code} value={loc.code}>
+                        <div className="flex flex-col py-1">
+                          <span className="font-medium">{loc.name}</span>
+                          <span className="text-xs text-muted-foreground">{loc.city}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Live distance indicator */}
+              <AnimatePresence>
+                {liveDistance > 0 && !sameLocation && (
+                  <motion.div
+                    key="distance-pill"
+                    initial={{ opacity: 0, y: -6, height: 0 }}
+                    animate={{ opacity: 1, y: 0, height: "auto" }}
+                    exit={{ opacity: 0, y: -6, height: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="mb-5"
+                  >
+                    <div
+                      className={cn(
+                        "flex items-center gap-2 text-xs px-3 py-2 rounded-lg",
+                        liveIsLong
+                          ? "bg-amber-50 border border-amber-200 text-amber-700"
+                          : "bg-muted text-muted-foreground"
+                      )}
+                    >
+                      {liveIsLong
+                        ? <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+                        : <Ruler className="h-3.5 w-3.5 shrink-0" />
+                      }
+                      <span>
+                        <strong>{liveDistance} km</strong>
+                        {liveIsLong
+                          ? " — long distance route (special request required at checkout)"
+                          : " route distance"}
+                      </span>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Same location warning */}
+              {sameLocation && (
+                <p className="text-xs text-destructive mb-4 text-center">
+                  Origin and destination must be different
+                </p>
+              )}
 
               {/* Search Button */}
               <Button
                 size="lg"
                 className="w-full h-14 text-lg"
                 onClick={handleSearch}
-                disabled={fromLocation === toLocation}
+                disabled={sameLocation}
                 asChild
               >
-                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                  {currentIsLong ? 'Request Arrangement' : 'Search Shuttles'}
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  Search Shuttles
                 </motion.button>
               </Button>
-
-              {fromLocation === toLocation && (
-                <p className="text-xs text-center text-destructive mt-2">
-                  Origin and destination must be different
-                </p>
-              )}
 
               {/* Login prompt */}
               {!user && (
                 <p className="text-xs text-center text-muted-foreground mt-4">
-                  Already have an account?{' '}
+                  Already have an account?{" "}
                   <button
-                    onClick={() => (window.location.href = '/login')}
+                    onClick={() => (window.location.href = "/login")}
                     className="text-primary hover:underline font-medium"
                   >
                     Log in
@@ -352,23 +272,13 @@ export function Hero() {
         <div className="absolute bottom-0 left-0 right-0 h-56 bg-linear-to-t from-background to-transparent" />
       </section>
 
-      {/* Search Results Modal */}
+      {/* Search Results Modal — used for ALL routes, long or short */}
       <SearchResultsModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         filters={searchFilters}
         isLoading={isSearching}
         onSelectResult={handleSelectResult}
-      />
-
-      {/* Long Distance Modal */}
-      <LongDistanceModal
-        isOpen={isLongDistanceModalOpen}
-        onClose={() => setIsLongDistanceModalOpen(false)}
-        fromLocation={searchFilters?.fromLocation ?? ''}
-        toLocation={searchFilters?.toLocation ?? ''}
-        fromCode={searchFilters?.fromCode ?? ''}
-        toCode={searchFilters?.toCode ?? ''}
         distance={distance}
       />
     </>

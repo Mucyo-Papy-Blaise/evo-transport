@@ -166,7 +166,6 @@ export class BookingService {
           toLocation: dto.toLocation,
           fromCode: dto.fromCode,
           toCode: dto.toCode,
-          message: dto.message,
           fromCity: dto.fromCity,
           toCity: dto.toCity,
           departureDate,
@@ -210,7 +209,7 @@ export class BookingService {
   async sendEmailOverDistance(
     userId: string | null,
     guestSessionId: string | null,
-    dto: CreateBookingDto | LongDistanceRequestDto, // Accept both types
+    dto: CreateBookingDto | LongDistanceRequestDto,
     distance: number,
   ): Promise<{
     message: string;
@@ -231,7 +230,7 @@ export class BookingService {
     if (userId) {
       const user = await this.prisma.user.findUnique({
         where: { id: userId },
-        select: { email: true, firstName: true, lastName: true, phone: true },
+        select: { email: true, firstName: true, lastName: true },
       });
 
       if (user) {
@@ -240,7 +239,7 @@ export class BookingService {
           user.firstName && user.lastName
             ? `${user.firstName} ${user.lastName}`
             : user.firstName || 'Valued Customer';
-        customerPhone = user.phone || dto.guestPhone || 'Not provided';
+        customerPhone = dto.guestPhone || 'Not provided';
       }
     }
 

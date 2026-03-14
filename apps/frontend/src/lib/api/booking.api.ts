@@ -123,4 +123,4 @@ export const bookingApi = {
   // Submit a long-distance request (>400 km)
   sendLongDistanceRequest: (data: LongDistanceRequest) =>
     apiClient.post<LongDistanceResponse>("/bookings/long-distance", data),
-};
+}
