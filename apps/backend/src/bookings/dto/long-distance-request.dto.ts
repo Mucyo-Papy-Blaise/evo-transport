@@ -14,30 +14,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { TripType, Currency } from '@prisma/client';
-
-class PassengerDto {
-  @ApiProperty({ example: 'John Doe' })
-  @IsString()
-  @IsNotEmpty()
-  name: string;
-
-  @ApiProperty({
-    enum: ['adult', 'child', 'infant', 'senior'],
-    example: 'adult',
-  })
-  @IsString()
-  @IsNotEmpty()
-  type: string;
-
-  @ApiProperty({ required: false, example: 25 })
-  @IsOptional()
-  @IsNumber()
-  age?: number;
-
-  @ApiProperty({ required: false, example: false })
-  @IsOptional()
-  requiresAssistance?: boolean;
-}
+import { PassengerDetailDto } from './create-booking.dto';
 
 export class LongDistanceRequestDto {
   @ApiProperty({ required: false, example: 'guest@example.com' })
@@ -116,11 +93,14 @@ export class LongDistanceRequestDto {
   @Max(5000)
   distance: number;
 
-  @ApiProperty({ type: [PassengerDto] })
+  @ApiProperty({
+    type: [PassengerDetailDto],
+    description: 'Detailed passenger information',
+  })
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => PassengerDto)
-  passengerDetails: PassengerDto[];
+  @Type(() => PassengerDetailDto)
+  passengerDetails: PassengerDetailDto[];
 
   @ApiProperty({
     required: false,
@@ -129,6 +109,12 @@ export class LongDistanceRequestDto {
   @IsOptional()
   @IsString()
   message?: string;
+
+  @ApiProperty({ example: 45000 })
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  price: number;
 
   @ApiProperty({ enum: Currency, default: Currency.RWF, example: Currency.RWF })
   @IsOptional()
