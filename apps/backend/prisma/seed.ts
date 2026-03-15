@@ -63,10 +63,10 @@ async function main() {
 
   // Create ADMIN user
   const admin = await prisma.user.upsert({
-    where: { email: 'admin@evo.com' },
+    where: { email: 'adminevo@yopmail.com' },
     update: {},
     create: {
-      email: 'admin@evo.com',
+      email: 'adminevo@yopmail.com',
       passwordHash: hashedPassword,
       firstName: 'Sarah',
       lastName: 'Admin',
@@ -158,7 +158,7 @@ async function main() {
   console.log('\n📝 Test Credentials:');
   console.log('Passenger: passenger@evo.com / Password123!');
   console.log('Driver: driver@evo.com / Password123!');
-  console.log('Admin: admin@evo.com / Password123!');
+  console.log('Admin: adminevo@yopmail.com / Password123!');
   console.log('Guest: guest@example.com (no password)');
 }
 
