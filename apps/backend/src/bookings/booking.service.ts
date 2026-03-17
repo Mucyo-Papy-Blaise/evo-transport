@@ -444,7 +444,7 @@ Require Assistance: ${passengerSummary.requiresAssistanceCount}
           responseTime: '24 hours',
           dashboardUrl: userId
             ? `${process.env.FRONTEND_URL}/dashboard/bookings`
-            : `${process.env.FRONTEND_URL}/booking-lookup`,
+            : `${process.env.FRONTEND_URL}/booking/lookup`,
           userType: userId ? 'registered' : 'guest',
         },
       );
@@ -608,7 +608,7 @@ Require Assistance: ${passengerSummary.requiresAssistanceCount}
     const dashboardUrl =
       data.userType === 'registered'
         ? `${process.env.FRONTEND_URL}/dashboard/bookings`
-        : `${process.env.FRONTEND_URL}/booking-lookup`;
+        : `${process.env.FRONTEND_URL}/booking/lookup`;
 
     await this.emailService.sendTemplatedEmail(
       customerEmail,
@@ -1051,7 +1051,7 @@ Require Assistance: ${passengerSummary.requiresAssistanceCount}
           supportEmail: process.env.SUPPORT_EMAIL || 'support@evotransport.rw',
           dashboardUrl: booking.userId
             ? `${process.env.FRONTEND_URL}/dashboard/bookings/${booking.id}`
-            : `${process.env.FRONTEND_URL}/booking-lookup?ref=${booking.bookingReference}`,
+            : `${process.env.FRONTEND_URL}/booking/lookup?ref=${booking.bookingReference}`,
         },
       );
 
