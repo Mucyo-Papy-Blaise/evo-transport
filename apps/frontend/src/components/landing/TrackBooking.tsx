@@ -28,12 +28,12 @@ export function TrackBooking() {
   const [isSearching, setIsSearching] = useState(false);
 
   const validateReference = (ref: string) => {
-    const pattern = /^EVO-\d{8}-[A-Z0-9]{5}$/i;
+    const pattern = /^(EVO|REQ)-\d{8}-[A-Z0-9]{5}$/i;
     if (!ref) {
       return "Please enter a booking reference";
     }
     if (!pattern.test(ref.toUpperCase())) {
-      return "Invalid booking reference format (e.g., EVO-20260310-70F27)";
+      return "Invalid booking reference format (e.g., EVO-20260310-70F27 or REQ-20260317-6A36D)";
     }
     return "";
   };
@@ -93,7 +93,7 @@ export function TrackBooking() {
                 Find Your Booking
               </CardTitle>
               <CardDescription>
-                Enter your 16-character booking reference (e.g., EVO-20260310-70F27)
+                Enter your booking reference (e.g., EVO-20260310-70F27 or REQ-20260317-6A36D)
               </CardDescription>
             </CardHeader>
             
@@ -108,7 +108,7 @@ export function TrackBooking() {
                     <Input
                       id="booking-ref"
                       type="text"
-                      placeholder="EVO-xxxx-xxxx"
+                      placeholder="EVO- or REQ-xxxx-xxxx"
                       value={bookingRef}
                       onChange={(e) => {
                         setBookingRef(e.target.value);
