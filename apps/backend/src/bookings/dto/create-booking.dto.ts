@@ -92,6 +92,10 @@ export class CreateBookingDto {
   @IsString()
   fromCode?: string;
 
+  @IsOptional()
+  @IsString()
+  distance?: string;
+
   @ApiPropertyOptional({ example: 'When distance is ggreater than 400KM' })
   @IsOptional()
   @IsString()

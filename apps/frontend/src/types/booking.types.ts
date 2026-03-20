@@ -1,12 +1,12 @@
 import { BookingStatus, Currency, TripType, UserType } from "./enum";
 import type { PassengerDetail } from "./passenger.types";
 
+// ─── Request Types ────────────────────────────────────────────────────────────
+
 export interface CreateBookingRequest {
   guestEmail?: string;
   guestName?: string;
   guestPhone: string;
-
-  // Booking details
   tripType: TripType;
   fromLocation: string;
   toLocation: string;
@@ -21,6 +21,7 @@ export interface CreateBookingRequest {
   passengerDetails: PassengerDetail[];
   price: number;
   currency?: Currency;
+  distance?: string;
 }
 
 export interface BookingFilterParams {
@@ -34,7 +35,40 @@ export interface BookingFilterParams {
   sortOrder?: 'asc' | 'desc';
 }
 
-// ==================== Response Types ====================
+// ─── Booking Messages (chat thread) ──────────────────────────────────────────
+
+export type MessageSenderType = 'ADMIN' | 'CUSTOMER' | 'GUEST';
+
+export interface BookingMessage {
+  id: string;
+  bookingId: string;
+  senderType: MessageSenderType;
+  senderId: string | null;
+  senderName: string | null;
+  content: string;
+  isRead: boolean;
+  readAt: string | null;
+  createdAt: string;
+  sender?: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    email: string;
+  } | null;
+}
+
+export interface SendMessageRequest {
+  content: string;
+}
+
+// Used by guests replying via the one-time link in their email
+export interface GuestReplyRequest {
+  replyToken: string;
+  content: string;
+  senderName?: string;
+}
+
+// ─── Core Booking Type ────────────────────────────────────────────────────────
 
 export interface BookingUser {
   id: string;
@@ -47,14 +81,14 @@ export interface BookingUser {
 export interface Booking {
   id: string;
   bookingReference: string;
-  
+
   // User info
   userId: string | null;
   guestEmail: string | null;
   guestName: string | null;
   guestPhone: string | null;
   userType: UserType;
-  
+
   // Booking details
   tripType: TripType;
   fromLocation: string;
@@ -63,10 +97,14 @@ export interface Booking {
   toCode: string | null;
   fromCity: string | null;
   toCity: string | null;
+  distance: string | null;          // km stored as string
+  requestMessage: string | null;    // customer's message for long-distance requests
+
   departureDate: string;
   returnDate: string | null;
   departureTime: string;
   returnTime: string | null;
+
   passengers: number;
   passengerDetails?: PassengerDetail[];
   passengerSummary?: {
@@ -83,6 +121,7 @@ export interface Booking {
 
   // Status
   status: BookingStatus;
+  statusReason: string | null;      // reason shown to customer when status changes
   adminNotes: string | null;
   adminRespondedAt: string | null;
   adminRespondedBy: string | null;
@@ -91,8 +130,9 @@ export interface Booking {
   createdAt: string;
   confirmedAt: string | null;
   cancelledAt: string | null;
+  rejectedAt: string | null;
 
-  // User object if registered
+  // Relations
   user?: BookingUser | null;
 }
 

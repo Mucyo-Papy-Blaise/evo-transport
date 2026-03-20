@@ -7,39 +7,37 @@ import { toast } from "@/components/ui/toast";
 import {
   CreateBookingRequest,
   BookingFilterParams,
+  SendMessageRequest,
+  GuestReplyRequest,
 } from "@/types/booking.types";
 import type { PassengerDetail } from "@/types/passenger.types";
 import { bookingApi, LongDistanceRequest } from "@/lib/api/booking.api";
 import { format } from "date-fns";
 
-//  Create Booking Hook
-
+//  Create Booking 
 export function useCreateBooking() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (data: CreateBookingRequest) => bookingApi.createBooking(data),
-
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.lists() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.popular() });
-
       toast.success(
         "Booking Request Received!",
-        `Your booking reference is ${response.bookingReference}. We'll confirm it shortly.`,
+        `Reference: ${response.bookingReference}. We'll confirm it shortly.`,
       );
     },
-
     onError: (error: ApiError) => {
       toast.error(
         "Booking Failed",
-        error.message || "Unable to process your booking. Please try again.",
+        error.message || "Unable to process your booking.",
       );
     },
   });
 }
 
-// Send Long Distance Request Hook (>400 km)
+// ─── Long Distance Request ────────────────────────────────────────────────────
 
 export function useSendLongDistanceRequest() {
   const queryClient = useQueryClient();
@@ -47,27 +45,24 @@ export function useSendLongDistanceRequest() {
   return useMutation({
     mutationFn: (data: LongDistanceRequest) =>
       bookingApi.sendLongDistanceRequest(data),
-
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.lists() });
-
+      // Backend returns `requestId` (REQ-YYYYMMDD-XXXXX), not `bookingReference`
       toast.success(
         "Long Distance Request Sent!",
-        `Your request reference is ${response.bookingReference}. Our team will contact you shortly to confirm arrangements.`,
+        `Reference: ${response.requestId}. Our team will contact you shortly.`,
       );
     },
-
     onError: (error: ApiError) => {
       toast.error(
         "Request Failed",
-        error.message ||
-          "Unable to send your long distance request. Please try again.",
+        error.message || "Unable to send your request.",
       );
     },
   });
 }
 
-//  Get My Bookings Hook
+// ─── My Bookings ──────────────────────────────────────────────────────────────
 
 export function useMyBookings(params?: BookingFilterParams) {
   return useQuery({
@@ -77,7 +72,8 @@ export function useMyBookings(params?: BookingFilterParams) {
   });
 }
 
-//  Get Booking by Reference Hook
+// ─── Booking by Reference ─────────────────────────────────────────────────────
+
 export function useBookingByReference(reference: string) {
   return useQuery({
     queryKey: queryKeys.bookings.reference(reference),
@@ -91,8 +87,9 @@ export function useBookingByReference(reference: string) {
   });
 }
 
-//  Get Popular Routes Hook
-export function usePopularRoutes(limit: number = 6) {
+// ─── Popular Routes ───────────────────────────────────────────────────────────
+
+export function usePopularRoutes(limit = 6) {
   return useQuery({
     queryKey: queryKeys.bookings.popular(limit),
     queryFn: () => bookingApi.getPopularRoutes(limit),
@@ -100,7 +97,8 @@ export function usePopularRoutes(limit: number = 6) {
   });
 }
 
-//  Check Availability Hook
+// ─── Check Availability ───────────────────────────────────────────────────────
+
 export function useCheckAvailability() {
   return useMutation({
     mutationFn: ({
@@ -113,7 +111,7 @@ export function useCheckAvailability() {
   });
 }
 
-// Cancel Booking Hook
+// ─── Cancel Booking ───────────────────────────────────────────────────────────
 
 export function useCancelBooking() {
   const queryClient = useQueryClient();
@@ -121,7 +119,6 @@ export function useCancelBooking() {
   return useMutation({
     mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
       bookingApi.cancelBooking(id, reason),
-
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.lists() });
       queryClient.invalidateQueries({
@@ -130,23 +127,89 @@ export function useCancelBooking() {
       queryClient.invalidateQueries({
         queryKey: queryKeys.bookings.detail(response.id),
       });
-
       toast.success(
         "Booking Cancelled",
-        `Your booking ${response.bookingReference} has been cancelled successfully.`,
+        `Booking ${response.bookingReference} has been cancelled.`,
       );
     },
-
     onError: (error: ApiError) => {
       toast.error(
         "Cancellation Failed",
-        error.message || "Unable to cancel booking. Please try again.",
+        error.message || "Unable to cancel booking.",
       );
     },
   });
 }
 
-// Build passengerDetails array from counts (adults, children, wheelchair, etc.)
+// ─── Booking Messages (Chat) ──────────────────────────────────────────────────
+
+/** Fetch the full message thread for a booking */
+export function useBookingMessages(bookingId: string) {
+  return useQuery({
+    queryKey: ["bookings", bookingId, "messages"],
+    queryFn: () => bookingApi.getBookingMessages(bookingId),
+    enabled: !!bookingId,
+    staleTime: 1000 * 30, // re-fetch after 30s (near-realtime feel)
+    refetchInterval: 1000 * 30, // poll every 30s when window is focused
+  });
+}
+
+/** Registered customer sends a message from their dashboard */
+export function useSendCustomerMessage(bookingId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: SendMessageRequest) =>
+      bookingApi.sendCustomerMessage(bookingId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["bookings", bookingId, "messages"],
+      });
+    },
+    onError: (error: ApiError) => {
+      toast.error("Send Failed", error.message || "Could not send message.");
+    },
+  });
+}
+
+/**
+ * Guest replies via the one-time token from their email.
+ * Used on the public /booking/reply?token=xxx page.
+ */
+export function useGuestReply() {
+  return useMutation({
+    mutationFn: (data: GuestReplyRequest) => bookingApi.sendGuestReply(data),
+    onSuccess: () => {
+      toast.success("Reply Sent", "Your message has been sent successfully.");
+    },
+    onError: (error: ApiError) => {
+      toast.error(
+        "Reply Failed",
+        error.message ||
+          "Invalid or expired reply link. Please contact support.",
+      );
+    },
+  });
+}
+
+/** Mark messages as read when the user opens the thread */
+export function useMarkMessagesRead(bookingId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (as: "ADMIN" | "CUSTOMER" | "GUEST" = "CUSTOMER") =>
+      bookingApi.markMessagesRead(bookingId, as),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["bookings", bookingId, "messages"],
+      });
+    },
+  });
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Build passengerDetails array from simple counts */
 export function buildPassengerDetails(params: {
   adults: number;
   children: number;
@@ -155,42 +218,29 @@ export function buildPassengerDetails(params: {
   wheelchairCount?: number;
 }): PassengerDetail[] {
   const details: PassengerDetail[] = [];
-  let wheelchairRemaining = params.wheelchairCount ?? 0;
+  let wheelchairLeft = params.wheelchairCount ?? 0;
 
-  for (let i = 0; i < (params.adults ?? 0); i++) {
-    details.push({
-      type: "adult",
-      age: 30,
-      requiresAssistance: wheelchairRemaining > 0,
-      ...(wheelchairRemaining > 0 && { assistanceType: "wheelchair" }),
-    });
-    if (wheelchairRemaining > 0) wheelchairRemaining--;
-  }
-  for (let i = 0; i < (params.children ?? 0); i++) {
-    details.push({
-      type: "child",
-      age: 8,
-      requiresAssistance: wheelchairRemaining > 0,
-      ...(wheelchairRemaining > 0 && { assistanceType: "wheelchair" }),
-    });
-    if (wheelchairRemaining > 0) wheelchairRemaining--;
-  }
-  for (let i = 0; i < (params.infants ?? 0); i++) {
-    details.push({ type: "infant", age: 1, requiresAssistance: false });
-  }
-  for (let i = 0; i < (params.seniors ?? 0); i++) {
-    details.push({
-      type: "senior",
-      age: 65,
-      requiresAssistance: wheelchairRemaining > 0,
-      ...(wheelchairRemaining > 0 && { assistanceType: "wheelchair" }),
-    });
-    if (wheelchairRemaining > 0) wheelchairRemaining--;
-  }
+  const push = (type: PassengerDetail["type"], age: number, count: number) => {
+    for (let i = 0; i < count; i++) {
+      details.push({
+        type,
+        age,
+        requiresAssistance: wheelchairLeft > 0,
+        ...(wheelchairLeft > 0 && { assistanceType: "wheelchair" as const }),
+      });
+      if (wheelchairLeft > 0) wheelchairLeft--;
+    }
+  };
+
+  push("adult", 30, params.adults ?? 0);
+  push("child", 8, params.children ?? 0);
+  push("infant", 1, params.infants ?? 0);
+  push("senior", 65, params.seniors ?? 0);
+
   return details;
 }
 
-// Map form data to API request (passengerDetails + shuttle times)
+/** Map booking form state to API request shape */
 export function mapFormToBookingRequest(
   formData: {
     tripType: "oneWay" | "roundTrip";
@@ -206,18 +256,14 @@ export function mapFormToBookingRequest(
     returnTime?: string;
     passengerDetails: PassengerDetail[];
     price: number;
+    distance?: string;
   },
-  userInfo?: {
-    email?: string;
-    name?: string;
-    phone: string;
-  },
+  userInfo?: { email?: string; name?: string; phone: string },
 ): CreateBookingRequest {
   return {
     ...(userInfo?.email && { guestEmail: userInfo.email }),
     ...(userInfo?.name && { guestName: userInfo.name }),
     guestPhone: userInfo?.phone ?? "",
-
     tripType: formData.tripType === "oneWay" ? "ONE_WAY" : "ROUND_TRIP",
     fromLocation: formData.fromLocation,
     toLocation: formData.toLocation,
@@ -233,11 +279,12 @@ export function mapFormToBookingRequest(
     ...(formData.returnTime && { returnTime: formData.returnTime }),
     passengerDetails: formData.passengerDetails,
     price: formData.price,
-    currency: "RWF",
+    currency: "EUR",
+    ...(formData.distance && { distance: formData.distance }),
   };
 }
 
-// Map form data to long distance request
+/** Map form state to long distance request shape */
 export function mapFormToLongDistanceRequest(
   formData: {
     tripType: "oneWay" | "roundTrip";
@@ -256,17 +303,12 @@ export function mapFormToLongDistanceRequest(
     distance: number;
     message?: string;
   },
-  userInfo?: {
-    email?: string;
-    name?: string;
-    phone: string;
-  },
+  userInfo?: { email?: string; name?: string; phone: string },
 ): LongDistanceRequest {
   return {
     ...(userInfo?.email && { guestEmail: userInfo.email }),
     ...(userInfo?.name && { guestName: userInfo.name }),
     guestPhone: userInfo?.phone ?? "",
-
     tripType: formData.tripType === "oneWay" ? "ONE_WAY" : "ROUND_TRIP",
     fromLocation: formData.fromLocation,
     toLocation: formData.toLocation,
@@ -282,7 +324,7 @@ export function mapFormToLongDistanceRequest(
     ...(formData.returnTime && { returnTime: formData.returnTime }),
     passengerDetails: formData.passengerDetails,
     price: formData.price,
-    currency: "RWF",
+    currency: "EUR",
     distance: formData.distance,
     ...(formData.message && { message: formData.message }),
   };

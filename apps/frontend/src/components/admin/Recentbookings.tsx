@@ -157,7 +157,7 @@ export function RecentBookings({ bookings = [], isLoading }: RecentBookingsProps
                 </td>
                 <td className="px-6 py-4">
                   <p className="font-semibold text-primary">
-                    {booking.price.toLocaleString()} FRw
+                    {booking.price.toLocaleString()} Euro
                   </p>
                 </td>
               </tr>

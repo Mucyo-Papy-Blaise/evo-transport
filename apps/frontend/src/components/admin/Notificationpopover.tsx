@@ -216,7 +216,7 @@ export function NotificationPopover() {
           </div>
 
           <div className="px-5 py-3 border-t border-border text-center">
-            <button
+            {/* <button
               onClick={() => {
                 router.push("/admin/notifications");
                 setOpen(false);
@@ -224,7 +224,7 @@ export function NotificationPopover() {
               className="text-xs text-primary hover:text-primary/80 font-medium transition-colors"
             >
               View all notifications →
-            </button>
+            </button> */}
           </div>
         </div>
       )}

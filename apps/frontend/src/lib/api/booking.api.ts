@@ -3,27 +3,27 @@ import {
   CreateBookingRequest,
   Booking,
   BookingListResponse,
+  BookingMessage,
+  SendMessageRequest,
+  GuestReplyRequest,
   MessageResponse,
   PopularRoute,
   AvailabilityResponse,
   BookingFilterParams,
 } from "@/types/booking.types";
 
+// ─── Long Distance ─────────────────────────────────────────────────────────────
+
 export interface LongDistanceRequest {
-  // Contact
   guestEmail?: string;
   guestName?: string;
   guestPhone: string;
-
-  // Route
   fromLocation: string;
   toLocation: string;
   fromCode?: string;
   toCode?: string;
   fromCity?: string;
   toCity?: string;
-
-  // Trip
   tripType: "ONE_WAY" | "ROUND_TRIP";
   departureDate: string;
   returnDate?: string;
@@ -37,90 +37,115 @@ export interface LongDistanceRequest {
   }>;
   price: number;
   currency?: string;
-
-  // Long distance specific
   distance: number;
-  message?: string; // Customer's special request message
+  message?: string;
 }
 
 export interface LongDistanceResponse {
-  id: string;
-  bookingReference: string;
   message: string;
+  requestId: string;
+  bookingReference: string;
+  bookingId: string;
+  createdAt: string;
 }
 
+// ─── Booking API ──────────────────────────────────────────────────────────────
+
 export const bookingApi = {
-  // Create a new booking
+  // ── Bookings CRUD ────────────────────────────────────────────────────────
+
   createBooking: (data: CreateBookingRequest) =>
     apiClient.post<Booking>("/bookings", data),
 
-  // Get all bookings
   getAllBookings: (params?: BookingFilterParams & { status?: string }) => {
-    const queryParams = new URLSearchParams();
-
+    const q = new URLSearchParams();
     if (params) {
-      if (params.status) {
-        queryParams.append("status", params.status);
-      }
-      if (params.fromDate) queryParams.append("fromDate", params.fromDate);
-      if (params.toDate) queryParams.append("toDate", params.toDate);
-      if (params.search) queryParams.append("search", params.search);
-      if (params.page) queryParams.append("page", params.page.toString());
-      if (params.limit) queryParams.append("limit", params.limit.toString());
-      if (params.sortBy) queryParams.append("sortBy", params.sortBy);
-      if (params.sortOrder) queryParams.append("sortOrder", params.sortOrder);
+      if (params.status) q.append("status", params.status);
+      if (params.fromDate) q.append("fromDate", params.fromDate);
+      if (params.toDate) q.append("toDate", params.toDate);
+      if (params.search) q.append("search", params.search);
+      if (params.page) q.append("page", params.page.toString());
+      if (params.limit) q.append("limit", params.limit.toString());
+      if (params.sortBy) q.append("sortBy", params.sortBy);
+      if (params.sortOrder) q.append("sortOrder", params.sortOrder);
     }
-
-    const url = queryParams.toString()
-      ? `/bookings?${queryParams.toString()}`
-      : "/bookings";
+    const url = q.toString() ? `/bookings?${q}` : "/bookings";
     return apiClient.get<BookingListResponse>(url);
   },
 
-  // Get current user's bookings
   getMyBookings: (params?: BookingFilterParams) => {
-    const queryString = params
-      ? new URLSearchParams(params as any).toString()
-      : "";
-    const url = queryString
-      ? `/bookings/my-bookings?${queryString}`
-      : "/bookings/my-bookings";
-    return apiClient.get<BookingListResponse>(url);
+    const q = params ? new URLSearchParams(params as any).toString() : "";
+    return apiClient.get<BookingListResponse>(
+      q ? `/bookings/my-bookings?${q}` : "/bookings/my-bookings",
+    );
   },
 
-  // Get booking by reference
   getBookingByReference: (reference: string) =>
     apiClient.get<Booking>(`/bookings/reference/${reference}`),
 
-  // Get booking by ID
   getBookingById: (id: string) => apiClient.get<Booking>(`/bookings/${id}`),
 
-  // Get popular routes
-  getPopularRoutes: (limit: number = 6) =>
-    apiClient.get<PopularRoute[]>(`/bookings/popular-routes?limit=${limit}`),
-
-  // Check availability
-  checkAvailability: (departureDate: string, route: string) =>
-    apiClient.get<AvailabilityResponse>(
-      `/bookings/check-availability?departureDate=${departureDate}&route=${encodeURIComponent(route)}`,
-    ),
-
-  // Update booking status
-  updateBookingStatus: (id: string, status: string, reason?: string) =>
+  // Reason is now required — shown to the customer
+  updateBookingStatus: (id: string, status: string, reason: string) =>
     apiClient.patch<Booking>(`/bookings/${id}/status`, { status, reason }),
 
-  // Admin respond to booking
-  adminRespond: (id: string, message: string, sendEmail: boolean = true) =>
+  // PATCH (not POST) — matches new controller
+  cancelBooking: (id: string, reason?: string) =>
+    apiClient.patch<Booking>(`/bookings/${id}/cancel`, { reason }),
+
+  sendLongDistanceRequest: (data: LongDistanceRequest) =>
+    apiClient.post<LongDistanceResponse>("/bookings/long-distance", data),
+
+  // Legacy: kept for backwards compat — use sendAdminMessage instead
+  adminRespond: (id: string, message: string, sendEmail = true) =>
     apiClient.post<MessageResponse>(`/bookings/${id}/respond`, {
       message,
       sendEmail,
     }),
 
-  // Cancel booking
-  cancelBooking: (id: string, reason?: string) =>
-    apiClient.post<Booking>(`/bookings/${id}/cancel`, { reason }),
+  // ── Booking messages (chat) ───────────────────────────────────────────────
 
-  // Submit a long-distance request (>400 km)
-  sendLongDistanceRequest: (data: LongDistanceRequest) =>
-    apiClient.post<LongDistanceResponse>("/bookings/long-distance", data),
-}
+  // Get full message thread for a booking
+  getBookingMessages: (bookingId: string) =>
+    apiClient.get<BookingMessage[]>(`/bookings/${bookingId}/messages`),
+
+  // Admin sends a message to the customer
+  sendAdminMessage: (bookingId: string, data: SendMessageRequest) =>
+    apiClient.post<BookingMessage>(`/bookings/${bookingId}/messages`, data),
+
+  // Registered customer replies from their dashboard
+  sendCustomerMessage: (bookingId: string, data: SendMessageRequest) =>
+    apiClient.post<BookingMessage>(
+      `/bookings/${bookingId}/messages/customer`,
+      data,
+    ),
+
+  // Guest replies using the one-time token from their email
+  sendGuestReply: (data: GuestReplyRequest) =>
+    apiClient.post<BookingMessage>(`/bookings/messages/guest-reply`, data),
+
+  // Mark messages as read
+  markMessagesRead: (
+    bookingId: string,
+    as: "ADMIN" | "CUSTOMER" | "GUEST" = "CUSTOMER",
+  ) => apiClient.patch(`/bookings/${bookingId}/messages/read?as=${as}`, {}),
+
+  // ── Other ─────────────────────────────────────────────────────────────────
+
+  getPopularRoutes: (limit = 6) =>
+    apiClient.get<PopularRoute[]>(`/bookings/popular-routes?limit=${limit}`),
+
+  checkAvailability: (departureDate: string, route: string) =>
+    apiClient.get<AvailabilityResponse>(
+      `/bookings/check-availability?departureDate=${departureDate}&route=${encodeURIComponent(route)}`,
+    ),
+
+  sendGuestMessage: (
+    bookingId: string,
+    data: { bookingReference: string; content: string; senderName?: string },
+  ) =>
+    apiClient.post<BookingMessage>(
+      `/bookings/${bookingId}/messages/guest`,
+      data,
+    ),
+};

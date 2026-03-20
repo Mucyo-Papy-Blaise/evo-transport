@@ -8,7 +8,8 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.628 0.164 233.75); /* #1DA1F2 - Twitter Blue */
+  --button: oklch(0.83 0.16 145);
+  --primary: oklch(0.76 0.10 250); /* #1DA1F2 - Twitter Blue */
   --primary-foreground: oklch(1 0 0); /* #FFFFFF */
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
@@ -21,8 +22,8 @@
   --destructive-foreground: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.628 0.164 233.75); /* #1DA1F2 */
-  --success: oklch(0.8 0.15 150); /* Green color for success/typing effect - matches green-400 */
+  --ring: oklch(0.83 0.16 145); /* #1DA1F2 */
+  --success: oklch(0.83 0.16 145); /* Green color for success/typing effect - matches green-400 */
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
@@ -31,7 +32,7 @@
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.628 0.164 233.75); /* #1DA1F2 */
+  --sidebar-primary: oklch(0.83 0.16 145); /* #1DA1F2 */
   --sidebar-primary-foreground: oklch(1 0 0);
   --sidebar-accent: oklch(0.97 0 0);
   --sidebar-accent-foreground: oklch(0.205 0 0);
@@ -46,9 +47,10 @@
   --foreground: oklch(0.985 0 0);
   --card: #1e2939; /* RGB: 30, 41, 57 */
   --card-foreground: oklch(0.985 0 0);
-  --popover: #1e2939; /* RGB: 30, 41, 57 */
+  --button: oklch(0.83 0.16 145);
+  --popover: oklch(1 0 0);/* RGB: 30, 41, 57 */
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.628 0.164 233.75); /* #1DA1F2 */
+  --primary: oklch(0.76 0.10 250); /* #1DA1F2 */
   --primary-foreground: oklch(1 0 0); /* #FFFFFF */
   --secondary: #1e2939; /* RGB: 30, 41, 57 - card backgrounds */
   --secondary-foreground: oklch(0.985 0 0);

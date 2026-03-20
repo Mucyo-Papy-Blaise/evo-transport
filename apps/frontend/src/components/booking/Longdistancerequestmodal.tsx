@@ -119,7 +119,9 @@ export function LongDistanceRequestModal({ isOpen, onClose, context }: Props) {
     sendRequest.mutate(payload, {
       onSuccess: (response) => {
         sessionStorage.removeItem("selectedRoute");
-        setBookingRef(response.bookingReference);
+        setBookingRef(
+          response.requestId ?? response.bookingReference ?? response.bookingId,
+        );
         setSubmitted(true);
       },
     });
@@ -339,9 +341,7 @@ export function LongDistanceRequestModal({ isOpen, onClose, context }: Props) {
                         </Label>
                         <Textarea
                           id="ld-message"
-                          placeholder={
-                            "Tell us what you need"
-                          }
+                          placeholder={"Tell us what you need"}
                           value={message}
                           onChange={(e) => {
                             setMessage(e.target.value);
@@ -360,8 +360,8 @@ export function LongDistanceRequestModal({ isOpen, onClose, context }: Props) {
                           </p>
                         ) : (
                           <p className="text-xs text-muted-foreground mt-1.5">
-                            We&lsquo;ll review and reach out within 2–4 hours via
-                            phone or email.
+                            We&lsquo;ll review and reach out within 2–4 hours
+                            via phone or email.
                           </p>
                         )}
                       </div>

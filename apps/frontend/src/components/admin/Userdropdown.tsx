@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { LogOut, User, Settings, ChevronDown } from "lucide-react";
+import { LogOut, User, Settings, ChevronDown, HomeIcon } from "lucide-react";
 import { cn } from "@/utils/utils";
 import { useAuth } from "@/lib/auth/auth-context";
 
@@ -44,11 +44,11 @@ export function UserDropdown() {
       },
     },
     {
-      icon: Settings,
-      label: "Settings",
+      icon: HomeIcon,
+      label: "Return Home",
       onClick: () => {
         setOpen(false);
-        router.push("/admin/settings");
+        router.push("/");
       },
     },
   ];

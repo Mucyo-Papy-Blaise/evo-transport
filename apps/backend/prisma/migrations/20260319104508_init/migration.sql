@@ -1,36 +1,29 @@
-/*
-  Warnings:
+-- CreateEnum
+CREATE TYPE "UserRole" AS ENUM ('PASSENGER', 'DRIVER', 'ADMIN');
 
-  - You are about to drop the `AuditLog` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `SavedLocation` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `User` table. If the table is not empty, all the data it contains will be lost.
+-- CreateEnum
+CREATE TYPE "AccountStatus" AS ENUM ('ACTIVE', 'SUSPENDED', 'BANNED', 'PENDING_VERIFICATION');
 
-*/
+-- CreateEnum
+CREATE TYPE "Language" AS ENUM ('EN', 'FR', 'RW', 'SW');
+
+-- CreateEnum
+CREATE TYPE "Currency" AS ENUM ('USD', 'EUR', 'RWF', 'GBP');
+
+-- CreateEnum
+CREATE TYPE "LocationType" AS ENUM ('HOME', 'WORK', 'AIRPORT', 'HOTEL', 'OTHER');
+
 -- CreateEnum
 CREATE TYPE "BookingStatus" AS ENUM ('PENDING', 'CONFIRMED', 'REJECTED', 'CANCELLED', 'COMPLETED');
 
 -- CreateEnum
 CREATE TYPE "TripType" AS ENUM ('ONE_WAY', 'ROUND_TRIP');
 
--- DropForeignKey
-ALTER TABLE "AuditLog" DROP CONSTRAINT "AuditLog_userId_fkey";
-
--- DropForeignKey
-ALTER TABLE "SavedLocation" DROP CONSTRAINT "SavedLocation_userId_fkey";
-
--- DropTable
-DROP TABLE "AuditLog";
-
--- DropTable
-DROP TABLE "SavedLocation";
-
--- DropTable
-DROP TABLE "User";
-
 -- CreateTable
 CREATE TABLE "users" (
     "id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
+    "phone" TEXT,
     "passwordHash" TEXT,
     "firstName" TEXT,
     "lastName" TEXT,
@@ -90,7 +83,7 @@ CREATE TABLE "audit_logs" (
 );
 
 -- CreateTable
-CREATE TABLE "Booking" (
+CREATE TABLE "bookings" (
     "id" TEXT NOT NULL,
     "bookingReference" TEXT NOT NULL,
     "userId" TEXT,
@@ -101,15 +94,18 @@ CREATE TABLE "Booking" (
     "tripType" "TripType" NOT NULL,
     "fromLocation" TEXT NOT NULL,
     "toLocation" TEXT NOT NULL,
+    "distance" TEXT,
     "fromCode" TEXT,
     "toCode" TEXT,
     "fromCity" TEXT,
     "toCity" TEXT,
+    "message" TEXT,
     "departureDate" TIMESTAMP(3) NOT NULL,
     "returnDate" TIMESTAMP(3),
     "departureTime" TEXT NOT NULL,
     "returnTime" TEXT,
     "passengers" INTEGER NOT NULL,
+    "passengerDetails" JSONB,
     "price" DOUBLE PRECISION NOT NULL,
     "currency" "Currency" NOT NULL DEFAULT 'RWF',
     "status" "BookingStatus" NOT NULL DEFAULT 'PENDING',
@@ -121,7 +117,7 @@ CREATE TABLE "Booking" (
     "confirmedAt" TIMESTAMP(3),
     "cancelledAt" TIMESTAMP(3),
 
-    CONSTRAINT "Booking_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "bookings_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -192,37 +188,37 @@ CREATE INDEX "audit_logs_method_idx" ON "audit_logs"("method");
 CREATE INDEX "audit_logs_status_idx" ON "audit_logs"("status");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Booking_bookingReference_key" ON "Booking"("bookingReference");
+CREATE UNIQUE INDEX "bookings_bookingReference_key" ON "bookings"("bookingReference");
 
 -- CreateIndex
-CREATE INDEX "Booking_bookingReference_idx" ON "Booking"("bookingReference");
+CREATE INDEX "bookings_bookingReference_idx" ON "bookings"("bookingReference");
 
 -- CreateIndex
-CREATE INDEX "Booking_userId_idx" ON "Booking"("userId");
+CREATE INDEX "bookings_userId_idx" ON "bookings"("userId");
 
 -- CreateIndex
-CREATE INDEX "Booking_guestEmail_idx" ON "Booking"("guestEmail");
+CREATE INDEX "bookings_guestEmail_idx" ON "bookings"("guestEmail");
 
 -- CreateIndex
-CREATE INDEX "Booking_status_idx" ON "Booking"("status");
+CREATE INDEX "bookings_status_idx" ON "bookings"("status");
 
 -- CreateIndex
-CREATE INDEX "Booking_createdAt_idx" ON "Booking"("createdAt");
+CREATE INDEX "bookings_createdAt_idx" ON "bookings"("createdAt");
 
 -- CreateIndex
-CREATE INDEX "Booking_departureDate_idx" ON "Booking"("departureDate");
+CREATE INDEX "bookings_departureDate_idx" ON "bookings"("departureDate");
 
 -- CreateIndex
-CREATE INDEX "Booking_fromCode_idx" ON "Booking"("fromCode");
+CREATE INDEX "bookings_fromCode_idx" ON "bookings"("fromCode");
 
 -- CreateIndex
-CREATE INDEX "Booking_toCode_idx" ON "Booking"("toCode");
+CREATE INDEX "bookings_toCode_idx" ON "bookings"("toCode");
 
 -- CreateIndex
-CREATE INDEX "Booking_fromLocation_idx" ON "Booking"("fromLocation");
+CREATE INDEX "bookings_fromLocation_idx" ON "bookings"("fromLocation");
 
 -- CreateIndex
-CREATE INDEX "Booking_toLocation_idx" ON "Booking"("toLocation");
+CREATE INDEX "bookings_toLocation_idx" ON "bookings"("toLocation");
 
 -- CreateIndex
 CREATE INDEX "notifications_bookingId_idx" ON "notifications"("bookingId");
@@ -243,10 +239,10 @@ ALTER TABLE "saved_locations" ADD CONSTRAINT "saved_locations_userId_fkey" FOREI
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Booking" ADD CONSTRAINT "Booking_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "bookings" ADD CONSTRAINT "bookings_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "notifications" ADD CONSTRAINT "notifications_bookingId_fkey" FOREIGN KEY ("bookingId") REFERENCES "Booking"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "notifications" ADD CONSTRAINT "notifications_bookingId_fkey" FOREIGN KEY ("bookingId") REFERENCES "bookings"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "notifications" ADD CONSTRAINT "notifications_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
