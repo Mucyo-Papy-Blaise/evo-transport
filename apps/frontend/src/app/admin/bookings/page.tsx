@@ -47,7 +47,7 @@ export default function BookingsPage() {
     setFilters(prev => ({
       ...prev,
       status: newFilters.status,
-      page: 1, // Reset to first page on filter change
+      page: 1, 
     }));
   };
 

@@ -18,7 +18,8 @@ export interface SearchResult {
   currency: string;
   availableSeats: number;
   amenities: string[];
-  
+  distance: number;
+  fromCity: string;
 }
 
 export interface BookingDetails {
@@ -27,16 +28,15 @@ export interface BookingDetails {
   toLocation: string;
   fromCode: string;
   toCode: string;
-  
+
   // Selected shuttle
   shuttle: SearchResult;
-  
-  // Trip details (to be filled on booking page)
-  tripType: 'ONE_WAY' | 'ROUND_TRIP';
+
+  // Trip details 
+  tripType: "ONE_WAY" | "ROUND_TRIP";
   departureDate: Date;
   returnDate?: Date;
   departureTime: string;
   returnTime?: string;
   passengers: number;
 }
-

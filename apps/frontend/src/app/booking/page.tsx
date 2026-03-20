@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { format, startOfDay } from "date-fns";
 import Link from "next/link";
@@ -55,26 +55,35 @@ import { toast } from "@/components/ui/toast";
 import { cn } from "@/utils/utils";
 import type { SearchResult } from "@/types/search.types";
 import { getRouteDistance, isLongDistance } from "@/lib/mock-data";
-import { LongDistanceBookingContext, LongDistanceRequestModal } from "@/components/booking/Longdistancerequestmodal";
-
+import {
+  LongDistanceBookingContext,
+  LongDistanceRequestModal,
+} from "@/components/booking/Longdistancerequestmodal";
 
 interface SelectedRouteStored {
   fromLocation: string;
   toLocation: string;
   fromCode?: string;
+  fromCity: string;
+  toCity: string;
   toCode?: string;
   distance?: number;
   shuttle: SearchResult;
 }
 
-export default function BookingPage() {
+function BookingPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const createBooking = useCreateBooking();
-  const hasRedirected = useRef(false);
 
-  const [selectedRoute, setSelectedRoute] = useState<SelectedRouteStored | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [selectedRoute, setSelectedRoute] =
+    useState<SelectedRouteStored | null>(null);
+  const isLoading =
+    selectedRoute === null &&
+    !searchParams.get("fromLocation") &&
+    typeof window !== "undefined" &&
+    !sessionStorage.getItem("selectedRoute");
 
   const [tripType, setTripType] = useState<"ONE_WAY" | "ROUND_TRIP">("ONE_WAY");
   const [departureDate, setDepartureDate] = useState<Date>(new Date());
@@ -86,37 +95,78 @@ export default function BookingPage() {
   const [children, setChildren] = useState(0);
   const [wheelchairCount, setWheelchairCount] = useState(0);
 
-  const [guestInfo, setGuestInfo] = useState({ email: "", name: "", phone: "" });
+  const [guestInfo, setGuestInfo] = useState({
+    email: "",
+    name: "",
+    phone: "",
+  });
   const [guestErrors, setGuestErrors] = useState({ email: "", phone: "" });
 
   // Long distance modal
   const [ldModalOpen, setLdModalOpen] = useState(false);
-  const [ldContext, setLdContext] = useState<LongDistanceBookingContext | null>(null);
+  const [ldContext, setLdContext] = useState<LongDistanceBookingContext | null>(
+    null,
+  );
 
   useEffect(() => {
-    let isMounted = true;
-    const stored = sessionStorage.getItem("selectedRoute");
+    const fromLocation = searchParams.get("fromLocation");
+    const toLocation = searchParams.get("toLocation");
+    const price = searchParams.get("price");
+    const distance = searchParams.get("distance");
+    const duration = searchParams.get("duration");
+    const currency = searchParams.get("currency");
 
-    if (stored && isMounted) {
+    if (fromLocation && toLocation && price) {
+      const routeFromParams: SelectedRouteStored = {
+        fromLocation,
+        toLocation,
+        fromCity: searchParams.get("fromCity") ?? "",
+        toCity: searchParams.get("toCity") ?? "",
+        fromCode: "",
+        toCode: "",
+        distance: distance ? Number(distance) : 0,
+        shuttle: {
+          id: "map-booking",
+          provider: "EVO Transport",
+          vehicleType: "Shuttle",
+          departureTime: "09:00",
+          arrivalTime: "",
+          duration: duration ?? "",
+          price: Number(price),
+          currency: currency ?? "EUR",
+          availableSeats: 12,
+          amenities: [],
+          distance: distance ? Number(distance) : 0,
+          fromCity: searchParams.get("fromCity") ?? "",
+        },
+      };
+      setTimeout(() => {
+        setSelectedRoute(routeFromParams);
+      }, 0);
+      return;
+    }
+
+    // ── Priority 2: sessionStorage (from Hero + SearchResultsModal) ──────
+    const stored = sessionStorage.getItem("selectedRoute");
+    if (stored) {
       try {
         const parsed = JSON.parse(stored) as SelectedRouteStored;
-        queueMicrotask(() => {
+        setTimeout(() => {
           setSelectedRoute(parsed);
           if (parsed?.shuttle?.departureTime) {
             setDepartureTime(parsed.shuttle.departureTime);
           }
-        });
+        }, 0);
       } catch {
-        queueMicrotask(() => setSelectedRoute(null));
+        router.push("/");
+        return;
       }
-    } else if (!hasRedirected.current && isMounted) {
-      hasRedirected.current = true;
+    } else {
       router.push("/");
+      return;
     }
 
-    if (isMounted) queueMicrotask(() => setIsLoading(false));
-    return () => { isMounted = false; };
-  }, [router]);
+  }, [router, searchParams]);
 
   const totalPassengers = adults + children;
   const clampedWheelchair = Math.min(wheelchairCount, totalPassengers);
@@ -128,7 +178,8 @@ export default function BookingPage() {
 
   // Resolve distance: prefer the value stored from search, fallback to mock lookup
   const routeDistance = (() => {
-    if (selectedRoute?.distance && selectedRoute.distance > 0) return selectedRoute.distance;
+    if (selectedRoute?.distance && selectedRoute.distance > 0)
+      return selectedRoute.distance;
     if (selectedRoute?.fromCode && selectedRoute?.toCode) {
       return getRouteDistance(selectedRoute.fromCode, selectedRoute.toCode);
     }
@@ -141,7 +192,11 @@ export default function BookingPage() {
     const errors = { email: "", phone: "" };
     if (!user && !guestInfo.email) {
       errors.email = "Email is required";
-    } else if (!user && guestInfo.email && !/\S+@\S+\.\S+/.test(guestInfo.email)) {
+    } else if (
+      !user &&
+      guestInfo.email &&
+      !/\S+@\S+\.\S+/.test(guestInfo.email)
+    ) {
       errors.email = "Please enter a valid email";
     }
     if (!guestInfo.phone?.trim()) errors.phone = "Phone number is required";
@@ -151,11 +206,17 @@ export default function BookingPage() {
 
   const handleBooking = () => {
     if (!selectedRoute) return;
-    if (totalPassengers < 1) { toast.error("Add at least one passenger", ""); return; }
+    if (totalPassengers < 1) {
+      toast.error("Add at least one passenger", "");
+      return;
+    }
     if (!validateContact()) return;
 
     const commonData = {
-      tripType: tripType === "ONE_WAY" ? "oneWay" : "roundTrip" as "oneWay" | "roundTrip",
+      tripType:
+        tripType === "ONE_WAY"
+          ? "oneWay"
+          : ("roundTrip" as "oneWay" | "roundTrip"),
       fromLocation: selectedRoute.fromLocation,
       toLocation: selectedRoute.toLocation,
       fromCode: selectedRoute.fromCode ?? "",
@@ -192,16 +253,16 @@ export default function BookingPage() {
     }
 
     // Normal route — book directly
-    createBooking.mutate(
-      mapFormToBookingRequest(commonData, contactInfo),
-      {
-        onSuccess: (response) => {
-          sessionStorage.removeItem("selectedRoute");
-          toast.success("Booking Confirmed!", `Reference: ${response.bookingReference}`);
-          router.push(`/booking/success?ref=${response.bookingReference}`);
-        },
-      }
-    );
+    createBooking.mutate(mapFormToBookingRequest(commonData, contactInfo), {
+      onSuccess: (response) => {
+        sessionStorage.removeItem("selectedRoute");
+        toast.success(
+          "Booking Confirmed!",
+          `Reference: ${response.bookingReference}`,
+        );
+        router.push(`/booking/success?ref=${response.bookingReference}`);
+      },
+    });
   };
 
   if (isLoading) {
@@ -221,8 +282,10 @@ export default function BookingPage() {
     <>
       <div className="min-h-screen bg-muted/30 py-12">
         <div className="container max-w-6xl mx-auto px-4">
-
-          <Link href="/" className="inline-flex items-center text-muted-foreground hover:text-foreground mb-6 transition-colors">
+          <Link
+            href="/"
+            className="inline-flex items-center text-muted-foreground hover:text-foreground mb-6 transition-colors"
+          >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to search
           </Link>
@@ -240,9 +303,10 @@ export default function BookingPage() {
                   Long Distance Route — {routeDistance} km
                 </p>
                 <p className="text-chart-1 text-sm mt-0.5">
-                  Fill in your details below, then click <strong>Confirm &amp; Book</strong>.
-                  A popup will appear where you can describe your requirements — our team will
-                  then contact you to confirm pricing and availability.
+                  Fill in your details below, then click{" "}
+                  <strong>Confirm &amp; Book</strong>. A popup will appear where
+                  you can describe your requirements — our team will then
+                  contact you to confirm pricing and availability.
                 </p>
               </div>
             </motion.div>
@@ -255,12 +319,13 @@ export default function BookingPage() {
           >
             {/* ── Left column ── */}
             <div className="lg:col-span-2 space-y-6">
-
               {/* Selected shuttle */}
               <Card>
                 <CardHeader>
                   <CardTitle>Selected Shuttle</CardTitle>
-                  <CardDescription>You&apos;ve selected the following shuttle</CardDescription>
+                  <CardDescription>
+                    You&apos;ve selected the following shuttle
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-start gap-4 p-4 bg-muted/50 rounded-lg">
@@ -270,14 +335,20 @@ export default function BookingPage() {
                     <div className="flex-1">
                       <div className="flex justify-between items-start">
                         <div>
-                          <h3 className="font-semibold text-lg">{shuttle.provider}</h3>
-                          <p className="text-muted-foreground">{shuttle.vehicleType}</p>
+                          <h3 className="font-semibold text-lg">
+                            {shuttle.provider}
+                          </h3>
+                          <p className="text-muted-foreground">
+                            {shuttle.vehicleType}
+                          </p>
                         </div>
                         <div className="text-right">
                           <div className="text-2xl font-bold text-primary">
-                            {shuttle.price.toLocaleString()} FRw
+                            {shuttle.price.toLocaleString()} Euro
                           </div>
-                          <div className="text-xs text-muted-foreground">per person</div>
+                          <div className="text-xs text-muted-foreground">
+                            per person
+                          </div>
                         </div>
                       </div>
 
@@ -294,7 +365,8 @@ export default function BookingPage() {
                           <span>{routeDistance} km</span>
                           {isLongDistanceRoute && (
                             <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400 font-medium">
-                              <AlertTriangle className="h-3 w-3" /> Long distance
+                              <AlertTriangle className="h-3 w-3" /> Long
+                              distance
                             </span>
                           )}
                         </div>
@@ -302,7 +374,10 @@ export default function BookingPage() {
 
                       <div className="flex flex-wrap gap-2 mt-3">
                         {shuttle.amenities?.map((amenity: string) => (
-                          <span key={amenity} className="text-xs bg-background px-2 py-1 rounded border border-border">
+                          <span
+                            key={amenity}
+                            className="text-xs bg-background px-2 py-1 rounded border border-border"
+                          >
                             {amenity}
                           </span>
                         ))}
@@ -317,38 +392,77 @@ export default function BookingPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     {user ? "Contact for this booking" : "Your Information"}
-                    <span className="text-xs bg-destructive/10 text-destructive px-2 py-1 rounded-full">Required</span>
+                    <span className="text-xs bg-destructive/10 text-destructive px-2 py-1 rounded-full">
+                      Required
+                    </span>
                   </CardTitle>
                   <CardDescription>
-                    {user ? "Phone number is required for booking confirmation." : "Please provide your contact details."}
+                    {user
+                      ? "Phone number is required for booking confirmation."
+                      : "Please provide your contact details."}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {!user && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="email" className={cn("text-sm font-medium mb-2 block", guestErrors.email && "text-destructive")}>
-                          Email Address <span className="text-destructive">*</span>
+                        <Label
+                          htmlFor="email"
+                          className={cn(
+                            "text-sm font-medium mb-2 block",
+                            guestErrors.email && "text-destructive",
+                          )}
+                        >
+                          Email Address{" "}
+                          <span className="text-destructive">*</span>
                         </Label>
                         <div className="relative">
                           <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                           <Input
-                            id="email" type="email" placeholder="you@example.com"
+                            id="email"
+                            type="email"
+                            placeholder="you@example.com"
                             value={guestInfo.email}
-                            onChange={(e) => { setGuestInfo({ ...guestInfo, email: e.target.value }); setGuestErrors((p) => ({ ...p, email: "" })); }}
-                            className={cn("pl-10 h-12", guestErrors.email && "border-destructive focus-visible:ring-destructive")}
+                            onChange={(e) => {
+                              setGuestInfo({
+                                ...guestInfo,
+                                email: e.target.value,
+                              });
+                              setGuestErrors((p) => ({ ...p, email: "" }));
+                            }}
+                            className={cn(
+                              "pl-10 h-12",
+                              guestErrors.email &&
+                                "border-destructive focus-visible:ring-destructive",
+                            )}
                           />
                         </div>
-                        {guestErrors.email && <p className="text-xs text-destructive mt-1">{guestErrors.email}</p>}
+                        {guestErrors.email && (
+                          <p className="text-xs text-destructive mt-1">
+                            {guestErrors.email}
+                          </p>
+                        )}
                       </div>
                       <div>
-                        <Label htmlFor="name" className="text-sm font-medium mb-2 block">Full Name (optional)</Label>
+                        <Label
+                          htmlFor="name"
+                          className="text-sm font-medium mb-2 block"
+                        >
+                          Full Name (optional)
+                        </Label>
                         <div className="relative">
                           <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                           <Input
-                            id="name" type="text" placeholder="John Doe"
+                            id="name"
+                            type="text"
+                            placeholder="John Doe"
                             value={guestInfo.name}
-                            onChange={(e) => setGuestInfo({ ...guestInfo, name: e.target.value })}
+                            onChange={(e) =>
+                              setGuestInfo({
+                                ...guestInfo,
+                                name: e.target.value,
+                              })
+                            }
                             className="pl-10 h-12"
                           />
                         </div>
@@ -356,19 +470,38 @@ export default function BookingPage() {
                     </div>
                   )}
                   <div>
-                    <Label htmlFor="phone" className={cn("text-sm font-medium mb-2 block", guestErrors.phone && "text-destructive")}>
+                    <Label
+                      htmlFor="phone"
+                      className={cn(
+                        "text-sm font-medium mb-2 block",
+                        guestErrors.phone && "text-destructive",
+                      )}
+                    >
                       Phone number <span className="text-destructive">*</span>
                     </Label>
                     <div className="relative">
                       <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
-                        id="phone" type="tel" placeholder="+250 788 123 456"
+                        id="phone"
+                        type="tel"
+                        placeholder="+250 788 123 456"
                         value={guestInfo.phone}
-                        onChange={(e) => { setGuestInfo({ ...guestInfo, phone: e.target.value }); setGuestErrors((p) => ({ ...p, phone: "" })); }}
-                        className={cn("pl-10 h-12", guestErrors.phone && "border-destructive focus-visible:ring-destructive")}
+                        onChange={(e) => {
+                          setGuestInfo({ ...guestInfo, phone: e.target.value });
+                          setGuestErrors((p) => ({ ...p, phone: "" }));
+                        }}
+                        className={cn(
+                          "pl-10 h-12",
+                          guestErrors.phone &&
+                            "border-destructive focus-visible:ring-destructive",
+                        )}
                       />
                     </div>
-                    {guestErrors.phone && <p className="text-xs text-destructive mt-1">{guestErrors.phone}</p>}
+                    {guestErrors.phone && (
+                      <p className="text-xs text-destructive mt-1">
+                        {guestErrors.phone}
+                      </p>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -377,47 +510,107 @@ export default function BookingPage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Trip Details</CardTitle>
-                  <CardDescription>Complete your trip information</CardDescription>
+                  <CardDescription>
+                    Complete your trip information
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-
                   {/* Trip type */}
                   <div>
-                    <Label className="text-sm font-medium mb-3 block">Trip Type</Label>
+                    <Label className="text-sm font-medium mb-3 block">
+                      Trip Type
+                    </Label>
                     <div className="flex gap-3">
-                      <Button type="button" variant={tripType === "ONE_WAY" ? "default" : "outline"} onClick={() => setTripType("ONE_WAY")} className="flex-1">One Way</Button>
-                      <Button type="button" variant={tripType === "ROUND_TRIP" ? "default" : "outline"} onClick={() => setTripType("ROUND_TRIP")} className="flex-1">Round Trip</Button>
+                      <Button
+                        type="button"
+                        variant={tripType === "ONE_WAY" ? "default" : "outline"}
+                        onClick={() => setTripType("ONE_WAY")}
+                        className="flex-1"
+                      >
+                        One Way
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={
+                          tripType === "ROUND_TRIP" ? "default" : "outline"
+                        }
+                        onClick={() => setTripType("ROUND_TRIP")}
+                        className="flex-1"
+                      >
+                        Round Trip
+                      </Button>
                     </div>
                   </div>
 
                   {/* Dates */}
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
-                      <Label className="text-sm font-medium mb-2 block">Departure Date</Label>
+                      <Label className="text-sm font-medium mb-2 block">
+                        Departure Date
+                      </Label>
                       <Popover>
                         <PopoverTrigger asChild>
-                          <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !departureDate && "text-muted-foreground")}>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !departureDate && "text-muted-foreground",
+                            )}
+                          >
                             <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
-                            {departureDate ? format(departureDate, "PPP") : "Select date"}
+                            {departureDate
+                              ? format(departureDate, "PPP")
+                              : "Select date"}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0">
-                          <Calendar mode="single" selected={departureDate} onSelect={(d) => { if (d) setDepartureDate(d); }} disabled={(date) => date < startOfDay(new Date())} initialFocus />
+                          <Calendar
+                            mode="single"
+                            selected={departureDate}
+                            onSelect={(d) => {
+                              if (d) {
+                                setDepartureDate(d);
+                                if (returnDate < d) setReturnDate(d);
+                              }
+                            }}
+                            disabled={(date) => date < startOfDay(new Date())}
+                            initialFocus
+                          />
                         </PopoverContent>
                       </Popover>
                     </div>
                     {tripType === "ROUND_TRIP" && (
                       <div>
-                        <Label className="text-sm font-medium mb-2 block">Return Date</Label>
+                        <Label className="text-sm font-medium mb-2 block">
+                          Return Date
+                        </Label>
                         <Popover>
                           <PopoverTrigger asChild>
-                            <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !returnDate && "text-muted-foreground")}>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !returnDate && "text-muted-foreground",
+                              )}
+                            >
                               <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
-                              {returnDate ? format(returnDate, "PPP") : "Select date"}
+                              {returnDate
+                                ? format(returnDate, "PPP")
+                                : "Select date"}
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0">
-                            <Calendar mode="single" selected={returnDate} onSelect={(d) => { if (d) setReturnDate(d); }} disabled={(date) => date < startOfDay(new Date())} initialFocus />
+                            <Calendar
+                              mode="single"
+                              selected={returnDate}
+                              onSelect={(d) => {
+                                if (d) setReturnDate(d);
+                              }}
+                              disabled={(date) =>
+                                date < startOfDay(departureDate)
+                              }
+                              initialFocus
+                            />
                           </PopoverContent>
                         </Popover>
                       </div>
@@ -427,23 +620,36 @@ export default function BookingPage() {
                   {/* Times */}
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
-                      <Label className="text-sm font-medium mb-2 block">Departure Time</Label>
+                      <Label className="text-sm font-medium mb-2 block">
+                        Departure Time
+                      </Label>
                       <div className="flex items-center gap-2 h-12 px-3 rounded-md border border-input bg-muted/50 text-sm">
                         <Clock className="h-4 w-4 text-primary" />
                         <span className="font-medium">{departureTime}</span>
-                        <span className="text-muted-foreground text-xs">(set by shuttle)</span>
+                        <span className="text-muted-foreground text-xs">
+                          (set by shuttle)
+                        </span>
                       </div>
                     </div>
                     {tripType === "ROUND_TRIP" && (
                       <div>
-                        <Label className="text-sm font-medium mb-2 block">Return Time</Label>
-                        <Select value={returnTime} onValueChange={setReturnTime}>
+                        <Label className="text-sm font-medium mb-2 block">
+                          Return Time
+                        </Label>
+                        <Select
+                          value={returnTime}
+                          onValueChange={setReturnTime}
+                        >
                           <SelectTrigger className="h-12">
                             <Clock className="h-4 w-4 text-primary mr-2" />
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {["14:00", "17:00", "18:00", "19:00"].map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                            {["14:00", "17:00", "18:00", "19:00"].map((t) => (
+                              <SelectItem key={t} value={t}>
+                                {t}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
@@ -452,29 +658,75 @@ export default function BookingPage() {
 
                   {/* Passengers */}
                   <div className="space-y-3">
-                    <Label className="text-sm font-medium block">Passengers</Label>
+                    <Label className="text-sm font-medium block">
+                      Passengers
+                    </Label>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div>
-                        <Label className="text-xs text-muted-foreground">Adults</Label>
-                        <Select value={adults.toString()} onValueChange={(v) => setAdults(parseInt(v, 10))}>
-                          <SelectTrigger className="h-10 mt-1"><SelectValue /></SelectTrigger>
-                          <SelectContent>{[1,2,3,4,5,6,7,8].map((n) => <SelectItem key={n} value={n.toString()}>{n}</SelectItem>)}</SelectContent>
+                        <Label className="text-xs text-muted-foreground">
+                          Adults
+                        </Label>
+                        <Select
+                          value={adults.toString()}
+                          onValueChange={(v) => setAdults(parseInt(v, 10))}
+                        >
+                          <SelectTrigger className="h-10 mt-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+                              <SelectItem key={n} value={n.toString()}>
+                                {n}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
                         </Select>
                       </div>
                       <div>
-                        <Label className="text-xs text-muted-foreground">Children</Label>
-                        <Select value={children.toString()} onValueChange={(v) => setChildren(parseInt(v, 10))}>
-                          <SelectTrigger className="h-10 mt-1"><SelectValue /></SelectTrigger>
-                          <SelectContent>{[0,1,2,3,4,5].map((n) => <SelectItem key={n} value={n.toString()}>{n}</SelectItem>)}</SelectContent>
+                        <Label className="text-xs text-muted-foreground">
+                          Children
+                        </Label>
+                        <Select
+                          value={children.toString()}
+                          onValueChange={(v) => setChildren(parseInt(v, 10))}
+                        >
+                          <SelectTrigger className="h-10 mt-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {[0, 1, 2, 3, 4, 5].map((n) => (
+                              <SelectItem key={n} value={n.toString()}>
+                                {n}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
                         </Select>
                       </div>
                       <div>
                         <Label className="text-xs text-muted-foreground flex items-center gap-1">
                           <Accessibility className="h-3 w-3" /> Wheelchair
                         </Label>
-                        <Select value={clampedWheelchair.toString()} onValueChange={(v) => setWheelchairCount(Math.min(parseInt(v, 10), totalPassengers))}>
-                          <SelectTrigger className="h-10 mt-1"><SelectValue /></SelectTrigger>
-                          <SelectContent>{Array.from({ length: totalPassengers + 1 }, (_, i) => <SelectItem key={i} value={i.toString()}>{i}</SelectItem>)}</SelectContent>
+                        <Select
+                          value={clampedWheelchair.toString()}
+                          onValueChange={(v) =>
+                            setWheelchairCount(
+                              Math.min(parseInt(v, 10), totalPassengers),
+                            )
+                          }
+                        >
+                          <SelectTrigger className="h-10 mt-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Array.from(
+                              { length: totalPassengers + 1 },
+                              (_, i) => (
+                                <SelectItem key={i} value={i.toString()}>
+                                  {i}
+                                </SelectItem>
+                              ),
+                            )}
+                          </SelectContent>
                         </Select>
                       </div>
                     </div>
@@ -493,7 +745,10 @@ export default function BookingPage() {
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Base fare</span>
-                      <span>{shuttle.price.toLocaleString()} FRw × {totalPassengers}</span>
+                      <span>
+                        {shuttle.price.toLocaleString()} Euro ×{" "}
+                        {totalPassengers}
+                      </span>
                     </div>
                     {isLongDistanceRoute && (
                       <p className="text-xs text-amber-600 dark:text-amber-400">
@@ -503,14 +758,18 @@ export default function BookingPage() {
                     <Separator />
                     <div className="flex justify-between font-semibold text-lg">
                       <span>Total</span>
-                      <span className="text-primary">{totalPrice.toLocaleString()} FRw</span>
+                      <span className="text-primary">
+                        {totalPrice.toLocaleString()} Euro
+                      </span>
                     </div>
                   </div>
 
                   <div className="bg-muted/50 rounded-lg p-4 space-y-2 text-sm">
                     <div className="flex items-center gap-2">
                       <Bus className="h-4 w-4 text-primary" />
-                      <span>{shuttle.provider} · {shuttle.vehicleType}</span>
+                      <span>
+                        {shuttle.provider} · {shuttle.vehicleType}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Clock className="h-4 w-4 text-primary" />
@@ -519,8 +778,10 @@ export default function BookingPage() {
                     <div className="flex items-center gap-2">
                       <Users className="h-4 w-4 text-primary" />
                       <span>
-                        {totalPassengers} passenger{totalPassengers !== 1 ? "s" : ""}
-                        {clampedWheelchair > 0 && ` (${clampedWheelchair} wheelchair)`}
+                        {totalPassengers} passenger
+                        {totalPassengers !== 1 ? "s" : ""}
+                        {clampedWheelchair > 0 &&
+                          ` (${clampedWheelchair} wheelchair)`}
                       </span>
                     </div>
                     {routeDistance > 0 && (
@@ -528,7 +789,9 @@ export default function BookingPage() {
                         <MapPin className="h-4 w-4 text-primary" />
                         <span>{routeDistance} km</span>
                         {isLongDistanceRoute && (
-                          <span className="text-amber-600 dark:text-amber-400 text-xs font-medium">Long distance</span>
+                          <span className="text-amber-600 dark:text-amber-400 text-xs font-medium">
+                            Long distance
+                          </span>
                         )}
                       </div>
                     )}
@@ -551,7 +814,9 @@ export default function BookingPage() {
                     onClick={handleBooking}
                     disabled={createBooking.isPending}
                   >
-                    {createBooking.isPending ? "Processing..." : "Confirm & Book"}
+                    {createBooking.isPending
+                      ? "Processing..."
+                      : "Confirm & Book"}
                   </Button>
                 </CardFooter>
               </Card>
@@ -567,5 +832,19 @@ export default function BookingPage() {
         context={ldContext}
       />
     </>
+  );
+}
+
+export default function BookingPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+        </div>
+      }
+    >
+      <BookingPageInner />
+    </Suspense>
   );
 }

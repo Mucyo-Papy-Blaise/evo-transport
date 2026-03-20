@@ -140,9 +140,9 @@ export function BookingsTable({ bookings, isLoading, onBookingClick }: BookingsT
                   
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-1">
-                      <span className="font-medium text-foreground">{booking.fromCode || '?'}</span>
+                      <span className="font-medium text-foreground">{booking.fromCity || '?'}</span>
                       <MapPin className="w-3 h-3 text-muted-foreground" />
-                      <span className="font-medium text-foreground">{booking.toCode || '?'}</span>
+                      <span className="font-medium text-foreground">{booking.toCity || '?'}</span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1 truncate max-w-40">
                       {booking.fromLocation.split(' ').slice(0, 2).join(' ')} → {booking.toLocation.split(' ').slice(0, 2).join(' ')}
@@ -168,7 +168,7 @@ export function BookingsTable({ bookings, isLoading, onBookingClick }: BookingsT
                   
                   <td className="px-6 py-4">
                     <p className="font-semibold text-primary">
-                      {booking.price.toLocaleString()} FRw
+                      {booking.price.toLocaleString()} Euro
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {booking.passengers} {booking.passengers > 1 ? 'pax' : 'pax'}

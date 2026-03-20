@@ -352,7 +352,7 @@ Thank you for choosing EVO Transport!
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">Total Amount</span>
                     <span className="text-3xl font-bold text-primary">
-                      {booking.price.toLocaleString()} FRw
+                      {booking.price.toLocaleString()} Euro
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-2">

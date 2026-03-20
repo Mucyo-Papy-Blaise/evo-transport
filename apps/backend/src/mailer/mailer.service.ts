@@ -31,7 +31,7 @@ export class MailerService {
     this.resend = new Resend(apiKey);
     const fromName = this.configService.get<string>(
       'MAIL_FROM_NAME',
-      'EVO TRANSPORT',
+      'ECO TRANSPORT',
     );
     const fromAddress = this.configService.get<string>('MAIL_FROM_ADDRESS');
     this.from = fromAddress

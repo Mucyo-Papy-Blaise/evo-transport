@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -12,7 +6,6 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
-
 
 enum UserRole {
   PASSENGER
@@ -28,10 +21,10 @@ enum AccountStatus {
 }
 
 enum Language {
-  EN 
-  FR 
-  RW 
-  SW 
+  EN
+  FR
+  RW
+  SW
 }
 
 enum Currency {
@@ -50,11 +43,11 @@ enum LocationType {
 }
 
 enum BookingStatus {
-  PENDING        
-  CONFIRMED   
-  REJECTED       
-  CANCELLED     
-  COMPLETED  
+  PENDING
+  CONFIRMED
+  REJECTED
+  CANCELLED
+  COMPLETED
 }
 
 enum TripType {
@@ -62,46 +55,49 @@ enum TripType {
   ROUND_TRIP
 }
 
+// NEW: who sent a message in the booking chat
+enum MessageSenderType {
+  ADMIN
+  CUSTOMER  
+  GUEST  
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
 model User {
-  id              String          @id @default(cuid())
-  email           String          @unique
+  id              String        @id @default(cuid())
+  email           String        @unique
   phone           String?
-  passwordHash    String?        
+  passwordHash    String?
   firstName       String?
   lastName        String?
   profilePicture  String?
-  
-  // Account Status
-  role            UserRole        @default(PASSENGER)
-  status          AccountStatus   @default(ACTIVE)
-  isGuest         Boolean         @default(false)
-  isEmailVerified Boolean         @default(false)
+
+  role            UserRole      @default(PASSENGER)
+  status          AccountStatus @default(ACTIVE)
+  isGuest         Boolean       @default(false)
+  isEmailVerified Boolean       @default(false)
   lastLoginAt     DateTime?
-  
-  // Guest Session Tracking
-  guestSessionId  String?         @unique
+
+  guestSessionId  String?       @unique
   guestExpiresAt  DateTime?
-  
-  // Email Verification & Password Reset
+
   emailVerificationToken String?
-  passwordResetToken String?
-  passwordResetExpires DateTime?
-  
-  // Preferences
-  preferredLanguage Language      @default(EN)
-  preferredCurrency Currency      @default(USD)
-  
-  // Timestamps
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  
-  // Relations
+  passwordResetToken     String?
+  passwordResetExpires   DateTime?
+
+  preferredLanguage Language @default(EN)
+  preferredCurrency Currency @default(USD)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   bookings        Booking[]
   savedLocations  SavedLocation[]
   auditLogs       AuditLog[]
   notifications   Notification[]
-  
-  // Indexes
+  bookingMessages BookingMessage[]
+
   @@index([email])
   @@index([guestSessionId])
   @@index([role])
@@ -111,24 +107,21 @@ model User {
 }
 
 model SavedLocation {
-  id              String          @id @default(cuid())
-  userId          String
-  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  name            String         
-  type            LocationType    @default(OTHER)
-  address         String
-  latitude        Float?
-  longitude       Float?
-  isDefault       Boolean         @default(false)
-  
-  // For airport locations
-  airportCode     String?         
-  terminal        String?
-  
-  // Timestamps
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  id        String       @id @default(cuid())
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  type      LocationType @default(OTHER)
+  address   String
+  latitude  Float?
+  longitude Float?
+  isDefault Boolean      @default(false)
+
+  airportCode String?
+  terminal    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([userId, name])
   @@index([userId])
@@ -138,124 +131,143 @@ model SavedLocation {
 }
 
 model AuditLog {
-  id         String   @id @default(cuid())
-  userId     String?
-  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  
-  action     String   
-  method     String   
-  url        String
-  body       Json?   
-  status     String   
-  error      String?  
-  ipAddress  String?
-  userAgent  String?
-  responseTime Int    
-  
-  createdAt  DateTime @default(now())
-  
+  id           String   @id @default(cuid())
+  userId       String?
+  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action       String
+  method       String
+  url          String
+  body         Json?
+  status       String
+  error        String?
+  ipAddress    String?
+  userAgent    String?
+  responseTime Int
+  createdAt    DateTime @default(now())
+
   @@index([userId])
   @@index([createdAt])
   @@index([action])
-  @@index([method])
-  @@index([status])
   @@map("audit_logs")
 }
 
 model Booking {
-  id              String          @id @default(cuid())
-  bookingReference String         @unique // Auto-generated: EVO-YYYYMMDD-XXXXX
-  
+  id               String        @id @default(cuid())
+  bookingReference String        @unique // EVO-YYYYMMDD-XXXXX or REQ-YYYYMMDD-XXXXX
+
   // User association
-  userId          String?
-  user            User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
-  
-  // Guest info (filled if userId is null)
-  guestEmail      String?
-  guestName       String?
-  guestPhone      String?
-  guestSessionId  String?         // To track guest sessions
-  
-  // Booking Details
-  tripType        TripType
-  fromLocation    String        
-  toLocation      String        
-  fromCode        String?   
-  toCode          String?      
-  fromCity        String?      
-  toCity          String?
-  message         String?   
-  
-  // Date and Time
-  departureDate   DateTime
-  returnDate      DateTime?
-  departureTime   String          // "09:00"
-  returnTime      String?
-  
-  // Passenger Information
-  passengers      Int              // Total count
-  passengerDetails Json?           // JSON array of passenger details
+  userId         String?
+  user           User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // Guest info
+  guestEmail     String?
+  guestName      String?
+  guestPhone     String?
+  guestSessionId String?
+
+  // Trip details
+  tripType      TripType
+  fromLocation  String
+  toLocation    String
+  distance      String?
+  fromCode      String?
+  toCode        String?
+  fromCity      String?
+  toCity        String?
+
+  // Dates & times
+  departureDate DateTime
+  returnDate    DateTime?
+  departureTime String
+  returnTime    String?
+
+  // Passengers
+  passengers       Int
+  passengerDetails Json?
 
   // Pricing
-  price           Float           // Total price
-  currency        Currency        @default(RWF)
-  
+  price    Float
+  currency Currency @default(RWF)
+
   // Status
-  status          BookingStatus   @default(PENDING)
-  adminNotes      String?         // Internal notes from admin
-  
-  // Admin interaction
+  status    BookingStatus @default(PENDING)
+
+  // Admin fields
+  adminNotes       String?   // internal-only notes, never shown to user
+  statusReason     String?   // reason shown to user when status changes
   adminRespondedAt DateTime?
-  adminRespondedBy String?        // Admin user ID who responded
-  
+  adminRespondedBy String?
+
+  // Long-distance request message
+  requestMessage String?
+
   // Timestamps
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  confirmedAt     DateTime?       // When booking was confirmed
-  cancelledAt     DateTime?       // When booking was cancelled
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  confirmedAt DateTime?
+  cancelledAt DateTime?
+  rejectedAt  DateTime?
 
   // Relations
-  notifications   Notification[]
+  notifications Notification[]
+  messages      BookingMessage[]
 
-  // Indexes for querying popular routes
   @@index([bookingReference])
   @@index([userId])
   @@index([guestEmail])
   @@index([status])
   @@index([createdAt])
   @@index([departureDate])
-  @@index([fromCode])   
-  @@index([toCode])    
-  @@index([fromLocation]) 
-  @@index([toLocation])  
   @@map("bookings")
 }
 
+// ─── Booking Message (chat thread per booking) ────────────────────────────────
+model BookingMessage {
+  id        String             @id @default(cuid())
+  bookingId String
+  booking   Booking            @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
-// Notification of Admin
+  senderType MessageSenderType
+  senderId   String?            // User.id for ADMIN / CUSTOMER; null for GUEST
+  sender     User?              @relation(fields: [senderId], references: [id], onDelete: SetNull)
+  senderName String?            // display name (useful when senderId is null)
+
+  content String
+  isRead  Boolean   @default(false)
+  readAt  DateTime?
+
+  // One-time token embedded in guest reply emails
+  // Allows unauthenticated reply via /booking/reply?token=...
+  guestReplyToken String? @unique
+
+  createdAt DateTime @default(now())
+
+  @@index([bookingId])
+  @@index([guestReplyToken])
+  @@index([createdAt])
+  @@map("booking_messages")
+}
+
 model Notification {
-  id              String          @id @default(cuid())
-  bookingId       String?
-  booking         Booking?        @relation(fields: [bookingId], references: [id], onDelete: SetNull)
-  userId          String?
-  user            User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
-  
-  // Recipient info
-  recipientEmail  String
-  recipientName   String?
-  recipientType   String  
-  
-  // Notification details
-  type            String         
-  subject         String
-  content         String?  
-  sentAt          DateTime        @default(now())
-  readAt          DateTime? 
-  
-  // Status
-  status          String 
-  errorMessage    String?
-  
+  id        String   @id @default(cuid())
+  bookingId String?
+  booking   Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  recipientEmail String
+  recipientName  String?
+  recipientType  String
+
+  type    String
+  subject String
+  content String?
+  sentAt  DateTime  @default(now())
+  readAt  DateTime?
+
+  status       String
+  errorMessage String?
+
   @@index([bookingId])
   @@index([userId])
   @@index([recipientEmail])

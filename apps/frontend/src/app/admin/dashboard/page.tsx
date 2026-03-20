@@ -14,7 +14,7 @@ export default function DashboardPage() {
   const displayStats = stats;
 
   const formatCurrency = (value: number) => {
-    return `${(value / 1000).toFixed(0)}K FRw`;
+    return `${(value / 1000).toFixed(0)}K Euro`;
   };
 
   return (

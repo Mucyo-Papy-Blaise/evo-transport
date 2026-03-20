@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
@@ -26,6 +26,7 @@ import {
   Send,
   Download,
   Printer,
+  Loader2,
 } from "lucide-react";
 
 // Shadcn UI Components
@@ -64,8 +65,15 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 // Hooks & API
 import { useAuth } from "@/lib/auth/auth-context";
 import { bookingApi } from "@/lib/api/booking.api";
+
+import {
+  useBookingMessages,
+  useSendAdminMessage,
+} from "../../../../hooks/Useadminbooking";
+
 import { AdminBooking } from "@/types/admin.types";
 import { BookingStatus } from "@/types";
+import type { BookingMessage } from "@/types/booking.types";
 import { cn } from "@/utils/utils";
 import { Label } from "@radix-ui/react-label";
 import { formatDate } from "@/utils/date-utils";
@@ -114,12 +122,29 @@ export default function BookingDetailsPage() {
   const [selectedStatus, setSelectedStatus] = useState<BookingStatus>();
   const [statusReason, setStatusReason] = useState("");
 
-  // Reply state
+  // Reply state (legacy dialog — kept for status change notes)
   const [replyDialogOpen, setReplyDialogOpen] = useState(false);
   const [replyMessage, setReplyMessage] = useState("");
   const [sendEmail, setSendEmail] = useState(true);
-
   const bookingId = params.id as string;
+  // Inline chat state
+  const { data: messages = [], isLoading: messagesLoading } =
+    useBookingMessages(bookingId);
+  const sendAdminMessage = useSendAdminMessage(bookingId);
+  const [chatMessage, setChatMessage] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const handleSendChatMessage = () => {
+    if (!chatMessage.trim()) return;
+    sendAdminMessage.mutate(
+      { content: chatMessage.trim() },
+      { onSuccess: () => setChatMessage("") },
+    );
+  };
 
   useEffect(() => {
     fetchBooking();
@@ -150,7 +175,7 @@ export default function BookingDetailsPage() {
       await bookingApi.updateBookingStatus(
         bookingId,
         selectedStatus,
-        statusReason || undefined,
+        statusReason,
       );
 
       toast.success(
@@ -294,14 +319,6 @@ export default function BookingDetailsPage() {
 
         {/* Action buttons */}
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setReplyDialogOpen(true)}
-          >
-            <MessageSquare className="w-4 h-4 mr-2" />
-            Reply
-          </Button>
           <Button size="sm" onClick={() => setStatusDialogOpen(true)}>
             Update Status
           </Button>
@@ -417,46 +434,79 @@ export default function BookingDetailsPage() {
               </div>
 
               {/* Passenger details from API */}
-              {(booking.passengerSummary || (booking.passengerDetails && booking.passengerDetails.length > 0)) && (
+              {(booking.passengerSummary ||
+                (booking.passengerDetails &&
+                  booking.passengerDetails.length > 0)) && (
                 <div className="mt-4 p-4 rounded-lg border border-border bg-muted/20 space-y-2">
-                  <div className="text-sm font-medium text-foreground">Passenger breakdown</div>
+                  <div className="text-sm font-medium text-foreground">
+                    Passenger breakdown
+                  </div>
                   {booking.passengerSummary && (
                     <div className="flex flex-wrap gap-2 text-xs">
                       {booking.passengerSummary.adultCount > 0 && (
-                        <Badge variant="secondary">Adults: {booking.passengerSummary.adultCount}</Badge>
+                        <Badge variant="secondary">
+                          Adults: {booking.passengerSummary.adultCount}
+                        </Badge>
                       )}
                       {booking.passengerSummary.childCount > 0 && (
-                        <Badge variant="secondary">Children: {booking.passengerSummary.childCount}</Badge>
+                        <Badge variant="secondary">
+                          Children: {booking.passengerSummary.childCount}
+                        </Badge>
                       )}
                       {booking.passengerSummary.infantCount > 0 && (
-                        <Badge variant="secondary">Infants: {booking.passengerSummary.infantCount}</Badge>
+                        <Badge variant="secondary">
+                          Infants: {booking.passengerSummary.infantCount}
+                        </Badge>
                       )}
                       {booking.passengerSummary.seniorCount > 0 && (
-                        <Badge variant="secondary">Seniors: {booking.passengerSummary.seniorCount}</Badge>
+                        <Badge variant="secondary">
+                          Seniors: {booking.passengerSummary.seniorCount}
+                        </Badge>
                       )}
                       {booking.passengerSummary.requiresAssistanceCount > 0 && (
-                        <Badge variant="outline" className="text-amber-600 border-amber-300">
-                          Wheelchair/assistance: {booking.passengerSummary.requiresAssistanceCount}
+                        <Badge
+                          variant="outline"
+                          className="text-amber-600 border-amber-300"
+                        >
+                          Wheelchair/assistance:{" "}
+                          {booking.passengerSummary.requiresAssistanceCount}
                         </Badge>
                       )}
                     </div>
                   )}
-                  {booking.passengerDetails && booking.passengerDetails.length > 0 && (
-                    <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
-                      {booking.passengerDetails.map((p: { type?: string; age?: number; requiresAssistance?: boolean; assistanceType?: string; specialNeeds?: string }, i: number) => (
-                        <li key={i} className="flex items-center gap-2">
-                          <span className="capitalize">{p.type}</span>
-                          {p.age != null && <span>(age {p.age})</span>}
-                          {p.requiresAssistance && (
-                            <Badge variant="outline" className="text-[10px]">
-                              {p.assistanceType || "Assistance"}
-                            </Badge>
-                          )}
-                          {p.specialNeeds && <span>— {p.specialNeeds}</span>}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                  {booking.passengerDetails &&
+                    booking.passengerDetails.length > 0 && (
+                      <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+                        {booking.passengerDetails.map(
+                          (
+                            p: {
+                              type?: string;
+                              age?: number;
+                              requiresAssistance?: boolean;
+                              assistanceType?: string;
+                              specialNeeds?: string;
+                            },
+                            i: number,
+                          ) => (
+                            <li key={i} className="flex items-center gap-2">
+                              <span className="capitalize">{p.type}</span>
+                              {p.age != null && <span>(age {p.age})</span>}
+                              {p.requiresAssistance && (
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px]"
+                                >
+                                  {p.assistanceType || "Assistance"}
+                                </Badge>
+                              )}
+                              {p.specialNeeds && (
+                                <span>— {p.specialNeeds}</span>
+                              )}
+                            </li>
+                          ),
+                        )}
+                      </ul>
+                    )}
                 </div>
               )}
             </CardContent>
@@ -514,27 +564,103 @@ export default function BookingDetailsPage() {
             </CardContent>
           </Card>
 
-          {/* Admin Notes */}
-          {booking.adminNotes && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm font-medium">
-                  Admin Notes
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                  {booking.adminNotes}
-                </p>
-                {booking.adminRespondedAt && (
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Responded:{" "}
-                    {format(new Date(booking.adminRespondedAt), "PPP p")}
-                  </p>
+          {/* Messages — inline chat with customer */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <MessageSquare className="h-4 w-4 text-primary" />
+                Messages
+                {messages.filter(
+                  (m: BookingMessage) => !m.isRead && m.senderType !== "ADMIN",
+                ).length > 0 && (
+                  <span className="ml-1 bg-primary text-primary-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                    {
+                      messages.filter(
+                        (m: BookingMessage) =>
+                          !m.isRead && m.senderType !== "ADMIN",
+                      ).length
+                    }{" "}
+                    new
+                  </span>
                 )}
-              </CardContent>
-            </Card>
-          )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {/* Thread */}
+              <div className="max-h-80 overflow-y-auto px-4 py-3 space-y-3 bg-muted/10 border-y border-border">
+                {messagesLoading ? (
+                  <div className="flex items-center justify-center py-8 gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading messages…
+                  </div>
+                ) : messages.length === 0 ? (
+                  <p className="text-center text-sm text-muted-foreground py-8">
+                    No messages yet. Send one to start the conversation.
+                  </p>
+                ) : (
+                  messages.map((msg: BookingMessage) => {
+                    const isAdmin = msg.senderType === "ADMIN";
+                    return (
+                      <div
+                        key={msg.id}
+                        className={cn(
+                          "flex flex-col gap-1 max-w-[80%]",
+                          isAdmin ? "items-end ml-auto" : "items-start",
+                        )}
+                      >
+                        <div
+                          className={cn(
+                            "rounded-2xl px-3.5 py-2 text-sm leading-relaxed",
+                            isAdmin
+                              ? "bg-primary text-primary-foreground rounded-tr-sm"
+                              : "bg-background border border-border text-foreground rounded-tl-sm",
+                          )}
+                        >
+                          {msg.content}
+                        </div>
+                        <span className="text-[10px] text-muted-foreground px-1">
+                          {isAdmin
+                            ? msg.senderName || "You"
+                            : msg.senderName || customerName}{" "}
+                          · {format(new Date(msg.createdAt), "MMM d, HH:mm")}
+                        </span>
+                      </div>
+                    );
+                  })
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* Compose */}
+              <div className="flex gap-2 items-end p-3">
+                <Textarea
+                  placeholder={`Message to ${customerName}…`}
+                  value={chatMessage}
+                  onChange={(e) => setChatMessage(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendChatMessage();
+                    }
+                  }}
+                  rows={2}
+                  className="resize-none text-sm flex-1"
+                />
+                <Button
+                  size="icon"
+                  onClick={handleSendChatMessage}
+                  disabled={!chatMessage.trim() || sendAdminMessage.isPending}
+                  className="h-10 w-10 shrink-0"
+                >
+                  {sendAdminMessage.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Right column - Summary & Actions */}
@@ -548,7 +674,7 @@ export default function BookingDetailsPage() {
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Base fare</span>
                 <span className="font-medium">
-                  {booking.price.toLocaleString()} FRw
+                  {booking.price.toLocaleString()} Euro
                 </span>
               </div>
               <div className="flex justify-between items-center">
@@ -559,7 +685,7 @@ export default function BookingDetailsPage() {
               <div className="flex justify-between items-center text-lg">
                 <span className="font-semibold">Total</span>
                 <span className="font-bold text-primary">
-                  {(booking.price * booking.passengers).toLocaleString()} FRw
+                  {(booking.price * booking.passengers).toLocaleString()} Euro
                 </span>
               </div>
             </CardContent>
@@ -676,7 +802,12 @@ export default function BookingDetailsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="reason">Reason (optional)</Label>
+              <Label htmlFor="reason">
+                Reason <span className="text-destructive">*</span>{" "}
+                <span className="text-xs text-muted-foreground font-normal">
+                  (shown to customer)
+                </span>
+              </Label>
               <Textarea
                 id="reason"
                 placeholder="Add a note about this status change..."

@@ -85,6 +85,7 @@ export function SearchResultsModal({
 
   useEffect(() => {
     if (!filters?.fromCode || !filters?.toCode) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setResults([]);
       return;
     }
@@ -241,7 +242,7 @@ export function SearchResultsModal({
                               <div className="text-right shrink-0">
                                 <p className="text-xl font-bold text-primary leading-tight">
                                   {shuttle.price.toLocaleString()}
-                                  <span className="text-xs font-normal text-muted-foreground ml-1">FRw</span>
+                                  <span className="text-xs font-normal text-muted-foreground ml-1">Euro</span>
                                 </p>
                                 <p className="text-xs text-muted-foreground">per person</p>
                               </div>
