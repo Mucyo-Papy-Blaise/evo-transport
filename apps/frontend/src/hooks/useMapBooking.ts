@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
+import { usePricingSettings } from '@/hooks/usePricingSettings';
 
 
 export interface MapLocation {
@@ -91,14 +92,17 @@ export async function forwardGeocode(query: string, token: string): Promise<MapL
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
-/**
- * Pricing config — adjust these to match your business rates.
- * Price is calculated as: distance (km) × PRICE_PER_KM
- */
-const PRICE_PER_KM = 2;     // €2 per km — change to your rate
-const CURRENCY     = 'EUR'; // change to your currency
+/** Used only when admin pricing API is unavailable. */
+const FALLBACK_PRICE_PER_KM = 2;
+const FALLBACK_CURRENCY = 'EUR';
 
 export function useMapBooking() {
+  const {
+    data: pricing,
+    isLoading: isPricingLoading,
+    isError: isPricingError,
+  } = usePricingSettings();
+
   const [from,        setFromState]   = useState<MapLocation | null>(null);
   const [to,          setToState]     = useState<MapLocation | null>(null);
   const [routeInfo,   setRouteInfo]   = useState<RoutePriceResult | null>(null);
@@ -111,28 +115,38 @@ export function useMapBooking() {
   // No backend call needed — distance comes from Haversine, price from config.
   // The distance value is then sent to your existing createBooking endpoint
   // as the `distance` field when the user submits the booking form.
-  const calculateRoute = useCallback((origin: MapLocation, destination: MapLocation) => {
-    setIsLoading(true);
-    setError(null);
+  const calculateRoute = useCallback(
+    (origin: MapLocation, destination: MapLocation) => {
+      setIsLoading(true);
+      setError(null);
 
-    try {
-      const km    = haversineKm(origin, destination);
-      const price = Math.round(km * PRICE_PER_KM);
+      try {
+        const km = haversineKm(origin, destination);
+        const rateRaw = pricing?.effectivePricePerKm;
+        const rate =
+          typeof rateRaw === 'number' &&
+          Number.isFinite(rateRaw) &&
+          rateRaw > 0
+            ? rateRaw
+            : FALLBACK_PRICE_PER_KM;
+        const price = Math.round(km * rate * 100) / 100;
 
-      setRouteInfo({
-        distance:          km,
-        price,
-        currency:          CURRENCY,
-        estimatedDuration: estimateDuration(km),
-        isLongDistance:    km > 400,
-      });
-    } catch {
-      setError('Could not calculate route. Please try again.');
-      setRouteInfo(null);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+        setRouteInfo({
+          distance: km,
+          price,
+          currency: pricing?.currency ?? FALLBACK_CURRENCY,
+          estimatedDuration: estimateDuration(km),
+          isLongDistance: km > 400,
+        });
+      } catch {
+        setError('Could not calculate route. Please try again.');
+        setRouteInfo(null);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [pricing?.effectivePricePerKm, pricing?.currency],
+  );
 
   // Recalculate whenever both pins change
   useEffect(() => {
@@ -182,11 +196,21 @@ export function useMapBooking() {
   }, []);
 
   return {
-    from, to,
-    routeInfo, isLoading, isGeocoding, error,
-    pinMode, setPinMode,
-    setFrom, setTo,
-    swapLocations, clearRoute,
+    from,
+    to,
+    routeInfo,
+    isLoading,
+    isGeocoding,
+    error,
+    pinMode,
+    setPinMode,
+    setFrom,
+    setTo,
+    swapLocations,
+    clearRoute,
     handleMapClick,
+    pricing: pricing ?? null,
+    isPricingLoading,
+    isPricingError,
   };
 }

@@ -12,6 +12,21 @@ import {
   BookingFilterParams,
 } from "@/types/booking.types";
 
+function unwrapBookingList(
+  res: BookingListResponse & { success?: boolean; message?: string },
+): BookingListResponse {
+  if (res?.bookings && Array.isArray(res.bookings)) {
+    return {
+      bookings: res.bookings,
+      total: res.total,
+      page: res.page ?? 1,
+      limit: res.limit ?? 10,
+      totalPages: res.totalPages ?? 1,
+    };
+  }
+  return res;
+}
+
 // ─── Long Distance ─────────────────────────────────────────────────────────────
 
 export interface LongDistanceRequest {
@@ -31,7 +46,6 @@ export interface LongDistanceRequest {
   returnTime?: string;
   passengerDetails: Array<{
     type: string;
-    age: number;
     requiresAssistance: boolean;
     assistanceType?: string;
   }>;
@@ -73,17 +87,29 @@ export const bookingApi = {
     return apiClient.get<BookingListResponse>(url);
   },
 
-  getMyBookings: (params?: BookingFilterParams) => {
+  getMyBookings: async (params?: BookingFilterParams) => {
     const q = params ? new URLSearchParams(params as any).toString() : "";
-    return apiClient.get<BookingListResponse>(
-      q ? `/bookings/my-bookings?${q}` : "/bookings/my-bookings",
-    );
+    const res = await apiClient.get<
+      BookingListResponse & { success?: boolean; message?: string }
+    >(q ? `/bookings/my-bookings?${q}` : "/bookings/my-bookings");
+    return unwrapBookingList(res);
   },
+
+  getMyBookingById: (id: string) =>
+    apiClient.get<Booking>(`/bookings/my/${id}`),
 
   getBookingByReference: (reference: string) =>
     apiClient.get<Booking>(`/bookings/reference/${reference}`),
 
   getBookingById: (id: string) => apiClient.get<Booking>(`/bookings/${id}`),
+
+  requestRebook: (bookingId: string, body?: { note?: string }) =>
+    apiClient.post<{
+      success: boolean;
+      message: string;
+      bookingId?: string;
+      bookingReference?: string;
+    }>(`/bookings/${bookingId}/rebook-request`, body ?? {}),
 
   // Reason is now required — shown to the customer
   updateBookingStatus: (id: string, status: string, reason: string) =>

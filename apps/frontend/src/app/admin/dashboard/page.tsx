@@ -1,11 +1,13 @@
 'use client';
 
+import Link from 'next/link';
 import { StatsCard } from '@/components/admin/StatsCard';
 import { RecentBookings } from '@/components/admin/Recentbookings';
 import { BookingStatusPieChart } from '@/components/admin/BookingStatusPieChart';
-import { BookOpen, CreditCard, Car, Users, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { BookOpen, CreditCard, Car, Users, Clock, CheckCircle, XCircle, Settings } from 'lucide-react';
 import { useDashboardStats, useRecentBookings } from '@/hooks/useDashboard';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 
 export default function DashboardPage() {
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
@@ -20,11 +22,19 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       {/* Page header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Welcome back! Here&apos;s what&apos;s happening with your business today.
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Welcome back! Here&apos;s what&apos;s happening with your business today.
+          </p>
+        </div>
+        <Button variant="outline" className="shrink-0 gap-2" asChild>
+          <Link href="/admin/settings">
+            <Settings className="h-4 w-4" />
+            Settings
+          </Link>
+        </Button>
       </div>
 
       {/* Stats grid */}

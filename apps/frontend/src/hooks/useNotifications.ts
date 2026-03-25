@@ -1,55 +1,75 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { notificationApi } from "@/lib/api/notification-api";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query/query-keys";
+import { notificationsApi } from "@/lib/api/notifications-api";
+import { ApiError } from "@/lib/query/query-client";
 import { toast } from "@/components/ui/toast";
 
-export const notificationKeys = {
-  all: ["notifications"] as const,
-  admin: (params?: any) => ["notifications", "admin", params] as const,
-  user: (params?: any) => ["notifications", "user", params] as const,
-  unreadCount: () => ["notifications", "unread"] as const,
-};
+// ─── Passenger (dashboard) ───────────────────────────────────────────────────
+
+export function useUserNotifications(page = 1, limit = 20) {
+  return useQuery({
+    queryKey: queryKeys.notifications.userList(page),
+    queryFn: () => notificationsApi.listUser({ page, limit }),
+    staleTime: 1000 * 30,
+  });
+}
+
+/** Unread count for the current user (admin or passenger, based on JWT). */
+export function useUnreadCount(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.notifications.unreadCount(),
+    queryFn: () => notificationsApi.getUnreadCount(),
+    enabled,
+    staleTime: 1000 * 60,
+    refetchInterval: 1000 * 60,
+  });
+}
+
+/** @deprecated use useUnreadCount */
+export const useUnreadNotificationCount = useUnreadCount;
+
+export function useMarkNotificationRead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => notificationsApi.markRead(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all() });
+    },
+    onError: (e: ApiError) => {
+      toast.error("Update failed", e.message);
+    },
+  });
+}
+
+export function useMarkAllNotificationsRead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => notificationsApi.markAllRead(),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all() });
+      toast.success("Done", "All notifications marked as read.");
+    },
+    onError: (e: ApiError) => {
+      toast.error("Update failed", e.message);
+    },
+  });
+}
+
+/** Admin popover — aliases for existing component names */
+export const useMarkAsRead = useMarkNotificationRead;
+export const useMarkAllAsRead = useMarkAllNotificationsRead;
 
 export function useAdminNotifications(params?: {
+  page?: number;
   limit?: number;
   unreadOnly?: boolean;
+  type?: string;
 }) {
   return useQuery({
-    queryKey: notificationKeys.admin(params),
-    queryFn: () => notificationApi.getAdminNotifications(params),
-    refetchInterval: 30000, // Refetch every 30 seconds
-  });
-}
-
-export function useUnreadCount() {
-  return useQuery({
-    queryKey: notificationKeys.unreadCount(),
-    queryFn: () => notificationApi.getUnreadCount(),
-    refetchInterval: 10000, // Refetch every 10 seconds
-  });
-}
-
-export function useMarkAsRead() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (id: string) => notificationApi.markAsRead(id),
-    onSuccess: () => {
-      // Invalidate all notification queries
-      queryClient.invalidateQueries({ queryKey: notificationKeys.all });
-    },
-  });
-}
-
-export function useMarkAllAsRead() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: () => notificationApi.markAllAsRead(),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: notificationKeys.all });
-      toast.success("All notifications marked as read");
-    },
+    queryKey: ["notifications", "admin", params] as const,
+    queryFn: () => notificationsApi.listAdmin(params),
+    staleTime: 1000 * 30,
   });
 }

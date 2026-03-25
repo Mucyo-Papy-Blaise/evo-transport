@@ -30,11 +30,28 @@ import { AuthGuard } from 'src/common/guards/auth.guard';
 import { CurrentUser } from 'src/common/decorators/user.decorator';
 import { Public } from 'src/common/decorators/public.decorator';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { RegisterDto } from './dto/register.dto';
 
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  @Public()
+  @Post('register')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Create a passenger account',
+    description: 'Registers a non-guest user and returns tokens (same shape as login).',
+  })
+  @ApiResponse({ status: HttpStatus.CREATED, description: 'Account created' })
+  @ApiResponse({
+    status: HttpStatus.CONFLICT,
+    description: 'Email already registered',
+  })
+  async register(@Body() dto: RegisterDto): Promise<LoginResponse> {
+    return this.authService.register(dto);
+  }
 
   @Public()
   @Post('login')

@@ -2,6 +2,7 @@ import {
   Injectable,
   UnauthorizedException,
   BadRequestException,
+  ConflictException,
   Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -20,7 +21,8 @@ import {
 import { ResponseUtil } from 'src/utils/response.util';
 import { ErrorUtil } from 'src/utils/error.util';
 import { MailerService } from 'src/mailer/mailer.service';
-import { AccountStatus, User } from '@prisma/client';
+import { AccountStatus, User, UserRole } from '@prisma/client';
+import { RegisterDto } from './dto/register.dto';
 
 const SALT_ROUNDS = 12;
 
@@ -42,12 +44,38 @@ export class AuthService {
     return bcryptjs.compare(password, hash);
   }
 
+  private async issueLoginResponse(user: User): Promise<LoginResponse> {
+    const payload: JwtPayload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      isEmailVerified: user.isEmailVerified,
+      preferredLanguage: user.preferredLanguage,
+      preferredCurrency: user.preferredCurrency,
+    };
+
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwt.signAsync(payload),
+      this.jwt.signAsync(payload, {
+        secret: process.env.JWT_REFRESH_SECRET || 'refresh-secret',
+        expiresIn: '7d',
+      }),
+    ]);
+
+    return {
+      accessToken,
+      refreshToken,
+      user: this.mapUserResponse(user),
+    };
+  }
+
   private mapUserResponse(user: User): UserResponse {
     return {
       id: user.id,
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
+      phone: user.phone,
       fullName:
         user.firstName && user.lastName
           ? `${user.firstName} ${user.lastName}`
@@ -83,34 +111,38 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Update last login
     await this.prisma.user.update({
       where: { id: user.id },
       data: { lastLoginAt: new Date() },
     });
 
-    const payload: JwtPayload = {
-      sub: user.id,
-      email: user.email,
-      role: user.role,
-      isEmailVerified: user.isEmailVerified,
-      preferredLanguage: user.preferredLanguage,
-      preferredCurrency: user.preferredCurrency,
-    };
+    return this.issueLoginResponse(user);
+  }
 
-    const [accessToken, refreshToken] = await Promise.all([
-      this.jwt.signAsync(payload),
-      this.jwt.signAsync(payload, {
-        secret: process.env.JWT_REFRESH_SECRET || 'refresh-secret',
-        expiresIn: '7d',
-      }),
-    ]);
+  async register(dto: RegisterDto): Promise<LoginResponse> {
+    const email = dto.email.toLowerCase().trim();
+    const existing = await this.prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      throw new ConflictException('An account with this email already exists');
+    }
 
-    return {
-      accessToken,
-      refreshToken,
-      user: this.mapUserResponse(user),
-    };
+    const passwordHash = await this.hashPassword(dto.password);
+    const user = await this.prisma.user.create({
+      data: {
+        email,
+        passwordHash,
+        firstName: dto.firstName.trim(),
+        lastName: dto.lastName.trim(),
+        phone: dto.phone?.trim() || null,
+        role: UserRole.PASSENGER,
+        isGuest: false,
+        status: AccountStatus.ACTIVE,
+        isEmailVerified: false,
+      },
+    });
+
+    this.logger.log(`Registered passenger: ${user.email}`);
+    return this.issueLoginResponse(user);
   }
 
   async getLoggedInUser(userId: string): Promise<UserResponse> {
@@ -151,6 +183,7 @@ export class AuthService {
       data: {
         ...(dto.firstName !== undefined && { firstName: dto.firstName }),
         ...(dto.lastName !== undefined && { lastName: dto.lastName }),
+        ...(dto.phone !== undefined && { phone: dto.phone }),
         ...(dto.profilePicture !== undefined && {
           profilePicture: dto.profilePicture,
         }),

@@ -17,6 +17,7 @@ import {
   Home,
   Printer,
   Share2,
+  ArrowLeftIcon,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -379,13 +380,8 @@ Thank you for choosing EVO Transport!
             <CardFooter className="bg-muted/50 border-t border-border p-6 flex flex-col sm:flex-row gap-4 justify-between print:hidden">
               <Link href="/" className="w-full sm:w-auto">
                 <Button variant="outline" className="w-full">
-                  <Home className="mr-2 h-4 w-4" />
+                  <ArrowLeftIcon className="mr-2 h-4 w-4" />
                   Back to Home
-                </Button>
-              </Link>
-              <Link href="/bookings" className="w-full sm:w-auto">
-                <Button className="w-full bg-primary text-primary-foreground">
-                  View My Bookings
                 </Button>
               </Link>
             </CardFooter>

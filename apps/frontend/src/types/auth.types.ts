@@ -1,4 +1,7 @@
+import type { Currency } from './enum';
 import { UserRole } from './enum';
+
+export type LanguageCode = 'EN' | 'FR' | 'RW' | 'SW';
 
 export interface ApiResponse<T = unknown> {
   success?: boolean;
@@ -15,7 +18,12 @@ export interface User {
   email: string;
   name?: string;
   fullName: string;
+  firstName?: string | null;
+  lastName?: string | null;
   phone?: string | null;
+  preferredLanguage?: LanguageCode;
+  preferredCurrency?: Currency;
+  isEmailVerified?: boolean;
   role: UserRole;
   avatarUrl?: string | null;
   /** Backend permission codes (e.g. CREATE_BRANCH, VIEW_REPORTS) for sidebar/access */
@@ -37,7 +45,29 @@ export interface LoginResponse {
   user: User;
 }
 
+export interface RegisterPayload {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+}
+
 export type MeResponse = User;
+
+export interface UpdateProfilePayload {
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  profilePicture?: string;
+  preferredLanguage?: LanguageCode;
+  preferredCurrency?: Currency;
+}
+
+export interface UpdateProfileResponse {
+  message: string;
+  user: User;
+}
 
 //  Change password 
 export interface ChangePasswordRequest {

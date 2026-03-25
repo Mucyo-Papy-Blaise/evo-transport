@@ -9,6 +9,7 @@ import { configValidationSchema } from './config/env.schema';
 import { BookingModule } from './bookings/booking.module';
 import { NotificationModule } from './notifications/notification.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { SettingsModule } from './settings/settings.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
     BookingModule,
     NotificationModule,
     DashboardModule,
+    SettingsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

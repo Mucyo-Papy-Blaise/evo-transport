@@ -51,6 +51,7 @@ import {
   mapFormToBookingRequest,
   buildPassengerDetails,
 } from "@/hooks/useBooking";
+import { usePricingSettings } from "@/hooks/usePricingSettings";
 import { toast } from "@/components/ui/toast";
 import { cn } from "@/utils/utils";
 import type { SearchResult } from "@/types/search.types";
@@ -69,6 +70,16 @@ interface SelectedRouteStored {
   toCode?: string;
   distance?: number;
   shuttle: SearchResult;
+}
+
+const ALL_DAY_HOURS = Array.from({ length: 24 }, (_, i) =>
+  `${String(i).padStart(2, "0")}:00`,
+);
+
+function toHourSlot(t: string): string {
+  const h = parseInt(t.split(":")[0] ?? "0", 10);
+  if (Number.isNaN(h)) return "09:00";
+  return `${String(Math.min(23, Math.max(0, h))).padStart(2, "0")}:00`;
 }
 
 function BookingPageInner() {
@@ -154,7 +165,7 @@ function BookingPageInner() {
         setTimeout(() => {
           setSelectedRoute(parsed);
           if (parsed?.shuttle?.departureTime) {
-            setDepartureTime(parsed.shuttle.departureTime);
+            setDepartureTime(toHourSlot(parsed.shuttle.departureTime));
           }
         }, 0);
       } catch {
@@ -187,6 +198,20 @@ function BookingPageInner() {
   })();
 
   const isLongDistanceRoute = isLongDistance(routeDistance);
+
+  const { data: pricing } = usePricingSettings(
+    format(departureDate, "yyyy-MM-dd"),
+  );
+
+  const perPersonPrice =
+    selectedRoute &&
+    routeDistance > 0 &&
+    pricing &&
+    Number.isFinite(pricing.effectivePricePerKm)
+      ? Math.round(routeDistance * pricing.effectivePricePerKm * 100) / 100
+      : (selectedRoute?.shuttle.price ?? 0);
+
+  const totalPrice = perPersonPrice * totalPassengers;
 
   const validateContact = () => {
     const errors = { email: "", phone: "" };
@@ -256,10 +281,6 @@ function BookingPageInner() {
     createBooking.mutate(mapFormToBookingRequest(commonData, contactInfo), {
       onSuccess: (response) => {
         sessionStorage.removeItem("selectedRoute");
-        toast.success(
-          "Booking Confirmed!",
-          `Reference: ${response.bookingReference}`,
-        );
         router.push(`/booking/success?ref=${response.bookingReference}`);
       },
     });
@@ -276,7 +297,6 @@ function BookingPageInner() {
   if (!selectedRoute) return null;
 
   const { fromLocation, toLocation, shuttle } = selectedRoute;
-  const totalPrice = shuttle.price * totalPassengers;
 
   return (
     <>
@@ -344,10 +364,18 @@ function BookingPageInner() {
                         </div>
                         <div className="text-right">
                           <div className="text-2xl font-bold text-primary">
-                            {shuttle.price.toLocaleString()} Euro
+                            {perPersonPrice.toLocaleString()} Euro
                           </div>
                           <div className="text-xs text-muted-foreground">
                             per person
+                            {routeDistance > 0 && pricing && (
+                              <span className="block text-[10px] mt-0.5">
+                                {pricing.season.charAt(0)}
+                                {pricing.season.slice(1).toLowerCase()} rate ·{" "}
+                                {pricing.effectivePricePerKm} EUR/km ·{" "}
+                                {routeDistance} km
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -623,13 +651,22 @@ function BookingPageInner() {
                       <Label className="text-sm font-medium mb-2 block">
                         Departure Time
                       </Label>
-                      <div className="flex items-center gap-2 h-12 px-3 rounded-md border border-input bg-muted/50 text-sm">
-                        <Clock className="h-4 w-4 text-primary" />
-                        <span className="font-medium">{departureTime}</span>
-                        <span className="text-muted-foreground text-xs">
-                          (set by shuttle)
-                        </span>
-                      </div>
+                      <Select
+                        value={departureTime}
+                        onValueChange={setDepartureTime}
+                      >
+                        <SelectTrigger className="h-12">
+                          <Clock className="h-4 w-4 text-primary mr-2" />
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-60">
+                          {ALL_DAY_HOURS.map((t) => (
+                            <SelectItem key={t} value={t}>
+                              {t}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     {tripType === "ROUND_TRIP" && (
                       <div>
@@ -644,8 +681,8 @@ function BookingPageInner() {
                             <Clock className="h-4 w-4 text-primary mr-2" />
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent>
-                            {["14:00", "17:00", "18:00", "19:00"].map((t) => (
+                          <SelectContent className="max-h-60">
+                            {ALL_DAY_HOURS.map((t) => (
                               <SelectItem key={t} value={t}>
                                 {t}
                               </SelectItem>
@@ -746,7 +783,7 @@ function BookingPageInner() {
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Base fare</span>
                       <span>
-                        {shuttle.price.toLocaleString()} Euro ×{" "}
+                        {perPersonPrice.toLocaleString()} Euro ×{" "}
                         {totalPassengers}
                       </span>
                     </div>
