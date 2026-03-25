@@ -13,6 +13,7 @@ import {
   AlertTriangle,
   Loader2,
   CheckCircle2,
+  SunMedium,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,11 @@ import { cn } from "@/utils/utils";
 import { useMapBooking } from "@/hooks/useMapBooking";
 import { MapView } from "./Mapview";
 import { LocationSearchInput } from "./Locationsearchinput";
+
+function seasonLabel(season: string) {
+  const s = season.replace(/_/g, " ").toLowerCase();
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
 
 // ─── Step indicator ───────────────────────────────────────────────────────────
 function Step({
@@ -78,6 +84,9 @@ export function MapBookingSection() {
     swapLocations,
     clearRoute,
     handleMapClick,
+    pricing,
+    isPricingLoading,
+    isPricingError,
   } = useMapBooking();
 
   const bothSelected = !!(from && to);
@@ -147,6 +156,42 @@ export function MapBookingSection() {
             Pin your pickup and drop-off directly on the map, or type to search
             any city in Europe.
           </p>
+
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            {isPricingLoading ? (
+              <div
+                className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/40 px-3 py-1.5 text-xs text-muted-foreground"
+                role="status"
+                aria-live="polite"
+              >
+                <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+                Loading seasonal rate…
+              </div>
+            ) : pricing ? (
+              <div className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/5 px-3 py-1.5 text-xs text-foreground shadow-sm">
+                <SunMedium className="h-3.5 w-3.5 text-primary shrink-0" />
+                <span>
+                  <span className="font-semibold">
+                    {seasonLabel(pricing.season)}
+                  </span>
+                  <span className="text-muted-foreground"> season · </span>
+                  <span className="font-medium tabular-nums">
+                    {pricing.effectivePricePerKm} {pricing.currency}/km
+                  </span>
+                  <span className="text-muted-foreground hidden sm:inline">
+                    {" "}
+                    · European meteorological seasons
+                  </span>
+                </span>
+              </div>
+            ) : (
+              <div className="inline-flex items-center gap-2 rounded-full border border-dashed border-border px-3 py-1.5 text-xs text-muted-foreground">
+                {isPricingError
+                  ? "Could not load seasonal rates — estimate uses a default per km."
+                  : "Seasonal rates unavailable — estimate uses a default per km."}
+              </div>
+            )}
+          </div>
         </motion.div>
 
         {/* ── Main card ── */}

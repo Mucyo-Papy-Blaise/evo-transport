@@ -5,11 +5,12 @@ import { PrismaModule } from 'src/prisma/prisma.module';
 import { MailerModule } from 'src/mailer/mailer.module';
 import { NotificationModule } from 'src/notifications/notification.module';
 import { AuthModule } from 'src/auth/auth.module';
+import { OptionalAuthGuard } from 'src/common/guards/optional-auth.guard';
 
 @Module({
   imports: [PrismaModule, MailerModule, NotificationModule, AuthModule],
   controllers: [BookingController],
-  providers: [BookingService],
+  providers: [BookingService, OptionalAuthGuard],
   exports: [BookingService],
 })
 export class BookingModule {}

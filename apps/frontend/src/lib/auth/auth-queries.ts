@@ -6,13 +6,19 @@ import { authApi } from '../api/auth-api';
 import { tokenStorage } from '@/lib/api/api-client';
 import { queryKeys } from '@/lib/query/query-keys';
 import { ApiError } from '@/lib/query/query-client';
-import type { AuthUser, LoginPayload } from '@/types';
+import type { AuthUser, LoginPayload, RegisterPayload, UpdateProfilePayload } from '@/types';
 import { toast } from '@/components/ui/toast';
 
+/**
+ * Token presence is read only after mount so the first server and client renders match
+ * (avoids hydration mismatches when a token exists in localStorage).
+ */
 function useHasToken(): boolean {
-  const [hasToken, setHasToken] = useState<boolean>(
-    () => typeof window !== 'undefined' && tokenStorage.get() !== null
-  );
+  const [hasToken, setHasToken] = useState(false);
+
+  useEffect(() => {
+    setHasToken(tokenStorage.get() !== null);
+  }, []);
 
   useEffect(() => {
     function onStorage(e: StorageEvent) {
@@ -60,6 +66,34 @@ export function useLogin() {
       tokenStorage.set(accessToken);
       queryClient.setQueryData<AuthUser>(queryKeys.auth.me(), user);
       toast.success('Welcome back!', `Logged in as ${user.fullName || user.email}`);
+    },
+  });
+}
+
+export function useRegister() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: RegisterPayload) => authApi.register(payload),
+    onSuccess: ({ accessToken, user }) => {
+      tokenStorage.set(accessToken);
+      queryClient.setQueryData<AuthUser>(queryKeys.auth.me(), user);
+      toast.success('Account created', `Welcome, ${user.fullName || user.email}`);
+    },
+  });
+}
+
+export function useUpdateProfile() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: UpdateProfilePayload) => authApi.updateProfile(payload),
+    onSuccess: (res) => {
+      queryClient.setQueryData<AuthUser>(queryKeys.auth.me(), res.user);
+      toast.success('Profile saved', res.message);
+    },
+    onError: (error: ApiError) => {
+      toast.error('Could not save profile', error.message || 'Please try again.');
     },
   });
 }

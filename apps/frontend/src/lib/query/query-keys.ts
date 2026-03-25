@@ -18,5 +18,12 @@ export const queryKeys = {
     reference: (ref: string) => ["bookings", "reference", ref] as const,
     popular: (limit?: number) => ["bookings", "popular", limit] as const,
     availability: (date: string, route: string) => ["bookings", "availability", date, route] as const,
+    myPassengerDetail: (id: string) => ["bookings", "my-detail", id] as const,
+  },
+
+  notifications: {
+    all: () => ["notifications"] as const,
+    userList: (page?: number) => ["notifications", "user", page] as const,
+    unreadCount: () => ["notifications", "unread-count"] as const,
   },
 } as const;

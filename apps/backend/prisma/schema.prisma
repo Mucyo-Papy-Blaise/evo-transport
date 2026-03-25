@@ -274,3 +274,16 @@ model Notification {
   @@index([sentAt])
   @@map("notifications")
 }
+
+/// Singleton row (`id`: `"default"`). Per-km rates by European meteorological season (climate-based pricing).
+model PricingSettings {
+  id                 String   @id
+  springPricePerKm   Decimal  @default(1.15) @db.Decimal(12, 4)
+  summerPricePerKm   Decimal  @default(1.35) @db.Decimal(12, 4)
+  autumnPricePerKm   Decimal  @default(1.15) @db.Decimal(12, 4)
+  winterPricePerKm   Decimal  @default(1.05) @db.Decimal(12, 4)
+  currency           Currency @default(EUR)
+  updatedAt          DateTime @updatedAt
+
+  @@map("pricing_settings")
+}

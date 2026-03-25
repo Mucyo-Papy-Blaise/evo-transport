@@ -20,6 +20,7 @@ export interface UserResponse {
   email: string;
   firstName: string | null;
   lastName: string | null;
+  phone: string | null;
   fullName: string | null;
   role: UserRole;
   isEmailVerified: boolean;

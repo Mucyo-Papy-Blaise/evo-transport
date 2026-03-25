@@ -154,6 +154,20 @@ async function main() {
   });
   console.log('✅ Created saved locations for driver');
 
+  await prisma.pricingSettings.upsert({
+    where: { id: 'default' },
+    update: {},
+    create: {
+      id: 'default',
+      springPricePerKm: 1.15,
+      summerPricePerKm: 1.35,
+      autumnPricePerKm: 1.15,
+      winterPricePerKm: 1.05,
+      currency: Currency.EUR,
+    },
+  });
+  console.log('✅ Ensured default seasonal pricing (pricing_settings)');
+
   console.log('🎉 Seeding completed successfully!');
   console.log('\n📝 Test Credentials:');
   console.log('Passenger: passenger@evo.com / Password123!');

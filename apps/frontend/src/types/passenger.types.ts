@@ -19,7 +19,6 @@ export type AssistanceType = (typeof AssistanceType)[keyof typeof AssistanceType
 
 export interface PassengerDetail {
   type: PassengerType;
-  age: number;
   name?: string;
   requiresAssistance: boolean;
   assistanceType?: AssistanceType;

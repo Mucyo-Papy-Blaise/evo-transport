@@ -42,7 +42,10 @@ import { RolesGuard } from 'src/common/guards/roles.guard';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { Public } from 'src/common/decorators/public.decorator';
 import { CurrentUser } from 'src/common/decorators/user.decorator';
+import type { User } from '@prisma/client';
 import { UserRole } from '@prisma/client';
+import { OptionalAuthGuard } from 'src/common/guards/optional-auth.guard';
+import { RebookRequestDto } from './dto/rebook-request.dto';
 
 @ApiTags('bookings')
 @Controller('bookings')
@@ -53,6 +56,7 @@ export class BookingController {
 
   @Post()
   @Public()
+  @UseGuards(OptionalAuthGuard)
   @ApiOperation({
     summary: 'Create a new booking (guests and registered users)',
   })
@@ -67,6 +71,7 @@ export class BookingController {
 
   @Post('long-distance')
   @Public()
+  @UseGuards(OptionalAuthGuard)
   @ApiOperation({ summary: 'Submit a long distance request (>400 km)' })
   @ApiResponse({ status: HttpStatus.CREATED, type: LongDistanceResponseDto })
   async sendLongDistanceRequest(
@@ -115,6 +120,15 @@ export class BookingController {
     @Query() filter: BookingFilterDto,
   ) {
     return this.bookingService.getMyBookings(userId, filter);
+  }
+
+  @Get('my/:id')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get one of your bookings (passenger)' })
+  @ApiResponse({ status: HttpStatus.OK, type: BookingResponseDto })
+  getMyBooking(@CurrentUser('id') userId: string, @Param('id') id: string) {
+    return this.bookingService.getBookingForPassenger(userId, id);
   }
 
   @Get('reference/:reference')
@@ -171,14 +185,34 @@ export class BookingController {
     return this.bookingService.cancelBooking(userId, bookingId, reason);
   }
 
+  @Post(':id/rebook-request')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Request to re-book this trip (notifies admins + confirms to you)',
+  })
+  requestRebook(
+    @CurrentUser('id') userId: string,
+    @Param('id') bookingId: string,
+    @Body() dto: RebookRequestDto,
+  ) {
+    return this.bookingService.requestRebook(userId, bookingId, dto);
+  }
+
   // ─── Messaging (booking chat) ──────────────────────────────────────────────
 
   @Get(':id/messages')
+  @UseGuards(AuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get all messages for a booking (admin or owner)' })
   @ApiResponse({ status: HttpStatus.OK, type: [BookingMessageResponseDto] })
-  getMessages(@Param('id') bookingId: string) {
-    return this.bookingService.getBookingMessages(bookingId);
+  getMessages(@Param('id') bookingId: string, @CurrentUser() user: User) {
+    return this.bookingService.getBookingMessages(
+      bookingId,
+      user.id,
+      user.role,
+    );
   }
 
   @Post(':id/messages')
@@ -196,6 +230,7 @@ export class BookingController {
   }
 
   @Post(':id/messages/customer')
+  @UseGuards(AuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Registered customer sends a message about their booking',
@@ -204,7 +239,7 @@ export class BookingController {
   customerSendMessage(
     @Param('id') bookingId: string,
     @CurrentUser('id') userId: string,
-    @Body() dto: GuestMessageDto,
+    @Body() dto: SendMessageDto,
   ) {
     return this.bookingService.sendCustomerMessage(bookingId, userId, dto);
   }
@@ -228,9 +263,15 @@ export class BookingController {
   @ApiOperation({ summary: 'Mark all unread messages as read' })
   markRead(
     @Param('id') bookingId: string,
+    @CurrentUser() user: User,
     @Query('as') readerType: 'ADMIN' | 'CUSTOMER' | 'GUEST' = 'CUSTOMER',
   ) {
-    return this.bookingService.markMessagesRead(bookingId, readerType);
+    return this.bookingService.markMessagesRead(
+      bookingId,
+      readerType,
+      user.id,
+      user.role,
+    );
   }
 
   //  Legacy admin respond (kept for compatibility)

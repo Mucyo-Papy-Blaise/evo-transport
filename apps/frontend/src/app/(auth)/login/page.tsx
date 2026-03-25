@@ -18,9 +18,8 @@ export default function LoginPage() {
 
   const roleRedirects: Record<string, string> = {
     ADMIN: "/admin/dashboard",
-    USER: "/dashboard",
-    DRIVER: "/driver/dashboard",
-    MANAGER: "/manager/dashboard",
+    PASSENGER: "/dashboard",
+    DRIVER: "/dashboard",
   };
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -178,11 +177,6 @@ export default function LoginPage() {
 
             {/* Remember + Forgot */}
             <div className="flex items-center justify-between text-sm">
-              <label className="flex items-center gap-2 text-gray-600">
-                <input type="checkbox" className="border-gray-300" />
-                Remember Me
-              </label>
-
               <Link
                 href="/forgot-password"
                 className="text-blue-600 hover:underline"
@@ -202,7 +196,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition disabled:opacity-50"
+              className="w-full bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary/60 cursor-pointer transition disabled:opacity-50"
             >
               {loading ? "Signing in…" : "Login"}
             </button>
@@ -210,13 +204,13 @@ export default function LoginPage() {
 
           {/* Register link */}
           <p className="text-center text-sm text-muted-foreground mt-7">
-            You can Back Home?{" "}
-            <a
-              href="\"
+            You Don&apos;t have account?{" "}
+            <Link
+              href="/register"
               className="text-primary font-semibold hover:text-secondary transition-colors"
             >
               Click Here!
-            </a>
+            </Link>
           </p>
         </div>
       </div>

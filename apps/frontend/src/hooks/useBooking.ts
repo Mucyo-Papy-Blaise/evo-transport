@@ -20,13 +20,9 @@ export function useCreateBooking() {
 
   return useMutation({
     mutationFn: (data: CreateBookingRequest) => bookingApi.createBooking(data),
-    onSuccess: (response) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.lists() });
       queryClient.invalidateQueries({ queryKey: queryKeys.bookings.popular() });
-      toast.success(
-        "Booking Request Received!",
-        `Reference: ${response.bookingReference}. We'll confirm it shortly.`,
-      );
     },
     onError: (error: ApiError) => {
       toast.error(
@@ -69,6 +65,20 @@ export function useMyBookings(params?: BookingFilterParams) {
     queryKey: queryKeys.bookings.myBookings(params),
     queryFn: () => bookingApi.getMyBookings(params),
     staleTime: 1000 * 60 * 5,
+  });
+}
+
+/** Single booking for the logged-in customer (dashboard detail page). */
+export function usePassengerBooking(id: string) {
+  return useQuery({
+    queryKey: queryKeys.bookings.myPassengerDetail(id),
+    queryFn: () => bookingApi.getMyBookingById(id),
+    enabled: !!id,
+    staleTime: 1000 * 60 * 5,
+    retry: (count, error: ApiError) => {
+      if (error.status === 404 || error.status === 403) return false;
+      return count < 2;
+    },
   });
 }
 
@@ -136,6 +146,39 @@ export function useCancelBooking() {
       toast.error(
         "Cancellation Failed",
         error.message || "Unable to cancel booking.",
+      );
+    },
+  });
+}
+
+export function useRequestRebook() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      bookingId,
+      note,
+    }: {
+      bookingId: string;
+      note?: string;
+    }) => bookingApi.requestRebook(bookingId, note ? { note } : undefined),
+    onSuccess: (response, { bookingId }) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.bookings.myPassengerDetail(bookingId),
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.bookings.lists() });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.bookings.myBookings(),
+      });
+      toast.success(
+        response.message || "Request sent",
+        "Our team will get back to you shortly.",
+      );
+    },
+    onError: (error: ApiError) => {
+      toast.error(
+        "Request failed",
+        error.message || "Could not send re-booking request.",
       );
     },
   });
@@ -220,11 +263,10 @@ export function buildPassengerDetails(params: {
   const details: PassengerDetail[] = [];
   let wheelchairLeft = params.wheelchairCount ?? 0;
 
-  const push = (type: PassengerDetail["type"], age: number, count: number) => {
+  const push = (type: PassengerDetail["type"], count: number) => {
     for (let i = 0; i < count; i++) {
       details.push({
         type,
-        age,
         requiresAssistance: wheelchairLeft > 0,
         ...(wheelchairLeft > 0 && { assistanceType: "wheelchair" as const }),
       });
@@ -232,10 +274,10 @@ export function buildPassengerDetails(params: {
     }
   };
 
-  push("adult", 30, params.adults ?? 0);
-  push("child", 8, params.children ?? 0);
-  push("infant", 1, params.infants ?? 0);
-  push("senior", 65, params.seniors ?? 0);
+  push("adult", params.adults ?? 0);
+  push("child", params.children ?? 0);
+  push("infant", params.infants ?? 0);
+  push("senior", params.seniors ?? 0);
 
   return details;
 }

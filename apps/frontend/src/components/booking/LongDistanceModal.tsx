@@ -108,7 +108,7 @@ export function LongDistanceModal({
         toCity: toLocation.split(' ')[0],
         departureDate: form.departureDate,
         departureTime: '08:00',
-        passengerDetails: [{ type: 'adult', age: 30, requiresAssistance: false }],
+        passengerDetails: [{ type: 'adult', requiresAssistance: false }],
         price: 0, // price TBD by admin
         currency: 'RWF',
         distance,

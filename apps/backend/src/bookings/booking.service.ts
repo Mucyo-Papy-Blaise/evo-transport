@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -112,7 +113,7 @@ export class BookingService {
       fromCity: booking.fromCity,
       toCity: booking.toCity,
       distance: booking.distance,
-      message: booking.message,
+      message: booking.requestMessage ?? null,
       departureDate: booking.departureDate,
       returnDate: booking.returnDate,
       departureTime: booking.departureTime,
@@ -788,8 +789,30 @@ export class BookingService {
     }
   }
 
-  /** Get all messages for a booking */
-  async getBookingMessages(bookingId: string) {
+  /** Passenger: booking must belong to userId. Admin: any booking. */
+  private async assertThreadAccess(
+    bookingId: string,
+    userId: string,
+    role: UserRole,
+  ) {
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: bookingId },
+      select: { id: true, userId: true },
+    });
+    if (!booking) throw new NotFoundException('Booking not found');
+    if (role === UserRole.ADMIN) return;
+    if (booking.userId !== userId) {
+      throw new ForbiddenException('You cannot access this booking');
+    }
+  }
+
+  /** Get all messages for a booking (admin or booking owner). */
+  async getBookingMessages(
+    bookingId: string,
+    userId: string,
+    role: UserRole,
+  ) {
+    await this.assertThreadAccess(bookingId, userId, role);
     return this.prisma.bookingMessage.findMany({
       where: { bookingId },
       include: MESSAGE_INCLUDE,
@@ -797,17 +820,23 @@ export class BookingService {
     });
   }
 
-  /** Mark messages as read (called when user/admin opens the thread) */
+  /** Mark messages as read (called when user/admin opens the thread). */
   async markMessagesRead(
     bookingId: string,
     readerType: 'ADMIN' | 'CUSTOMER' | 'GUEST',
+    userId?: string,
+    role?: UserRole,
   ) {
-    const notSentByReader =
-      readerType === 'ADMIN'
-        ? { NOT: { senderType: MessageSenderType.ADMIN } }
-        : { NOT: { senderType: MessageSenderType.ADMIN, ...({} as any) } };
+    if (readerType === 'CUSTOMER') {
+      if (!userId || !role)
+        throw new BadRequestException('Authentication required');
+      await this.assertThreadAccess(bookingId, userId, role);
+    } else if (readerType === 'ADMIN') {
+      if (role !== UserRole.ADMIN) {
+        throw new ForbiddenException('Admin only');
+      }
+    }
 
-    // Mark all messages not sent by this reader as read
     await this.prisma.bookingMessage.updateMany({
       where: {
         bookingId,
@@ -955,6 +984,76 @@ export class BookingService {
     return this.mapBookingToResponse(booking);
   }
 
+  async getBookingForPassenger(userId: string, bookingId: string) {
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: BOOKING_INCLUDE,
+    });
+    if (!booking) throw new NotFoundException('Booking not found');
+    if (booking.userId !== userId) {
+      throw new ForbiddenException('This booking does not belong to you');
+    }
+    return this.mapBookingToResponse(booking);
+  }
+
+  async requestRebook(
+    userId: string,
+    bookingId: string,
+    dto?: { note?: string },
+  ) {
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: BOOKING_INCLUDE,
+    });
+    if (!booking) throw new NotFoundException('Booking not found');
+    if (booking.userId !== userId) {
+      throw new BadRequestException('This booking does not belong to you');
+    }
+
+    const passenger = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+    if (!passenger) throw new NotFoundException('User not found');
+
+    const admins = await this.getActiveAdmins();
+    const note = dto?.note?.trim() || '';
+    const customerLabel =
+      `${passenger.firstName || ''} ${passenger.lastName || ''}`.trim() ||
+      passenger.email;
+
+    for (const admin of admins) {
+      await this.notificationService.create({
+        bookingId: booking.id,
+        userId: admin.id,
+        recipientEmail: admin.email,
+        recipientName: admin.firstName || 'Admin',
+        recipientType: 'ADMIN',
+        type: 'REBOOK_REQUEST',
+        subject: `Re-book request — ${booking.bookingReference}`,
+        content: `${customerLabel} requested to book this route again.${note ? ` Note: ${note}` : ''}`,
+        status: 'SENT',
+      });
+    }
+
+    await this.notificationService.create({
+      bookingId: booking.id,
+      userId: passenger.id,
+      recipientEmail: passenger.email,
+      recipientName: customerLabel,
+      recipientType: 'CUSTOMER',
+      type: 'REBOOK_REQUEST_CONFIRMED',
+      subject: 'Re-book request received',
+      content:
+        'Our team has been notified. You can also use Re-book on your dashboard to start a new booking with the same route.',
+      status: 'SENT',
+    });
+
+    return ResponseUtil.success(
+      { bookingId: booking.id, bookingReference: booking.bookingReference },
+      'Re-book request sent',
+    );
+  }
+
   async getBookingByReference(reference: string) {
     const booking = await this.prisma.booking.findUnique({
       where: { bookingReference: reference },
@@ -979,12 +1078,10 @@ export class BookingService {
     if (!booking) throw new NotFoundException('Booking not found');
     if (booking.userId !== userId)
       throw new BadRequestException('Not your booking');
-    if (
-      !(
-        [BookingStatus.PENDING, BookingStatus.CONFIRMED] as BookingStatus[]
-      ).includes(booking.status)
-    ) {
-      throw new BadRequestException('This booking cannot be cancelled');
+    if (booking.status !== BookingStatus.PENDING) {
+      throw new BadRequestException(
+        'Only pending bookings can be cancelled online. For confirmed trips, message our team in your booking chat.',
+      );
     }
 
     const cancelReason = reason || 'Cancelled by customer';
