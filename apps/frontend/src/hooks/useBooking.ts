@@ -197,6 +197,21 @@ export function useBookingMessages(bookingId: string) {
   });
 }
 
+/** Guest reads a message thread using their bookingReference (public). */
+export function useGuestBookingMessages(
+  bookingId: string,
+  bookingReference: string,
+) {
+  return useQuery({
+    queryKey: ["bookings", bookingId, "messages", "guest", bookingReference],
+    queryFn: () =>
+      bookingApi.getGuestBookingMessages(bookingId, bookingReference),
+    enabled: !!bookingId && !!bookingReference,
+    staleTime: 1000 * 30,
+    refetchInterval: 1000 * 30,
+  });
+}
+
 /** Registered customer sends a message from their dashboard */
 export function useSendCustomerMessage(bookingId: string) {
   const queryClient = useQueryClient();

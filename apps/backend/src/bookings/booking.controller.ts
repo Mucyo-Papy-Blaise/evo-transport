@@ -215,6 +215,24 @@ export class BookingController {
     );
   }
 
+  // ─── Guest thread read (public) ────────────────────────────────────────────
+
+  @Get(':id/messages/guest')
+  @Public()
+  @ApiOperation({
+    summary: 'Guest reads message thread (verified by bookingReference)',
+  })
+  @ApiResponse({ status: HttpStatus.OK, type: [BookingMessageResponseDto] })
+  getGuestMessages(
+    @Param('id') bookingId: string,
+    @Query('bookingReference') bookingReference: string,
+  ) {
+    return this.bookingService.getGuestBookingMessages(
+      bookingId,
+      bookingReference,
+    );
+  }
+
   @Post(':id/messages')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)

@@ -21,12 +21,6 @@ export class PassengerDetailDto {
   @IsEnum(PassengerType)
   type: PassengerType;
 
-  @ApiProperty({ example: 35, minimum: 0, maximum: 120 })
-  @IsNumber()
-  @Min(0)
-  @Max(120)
-  age: number;
-
   @ApiPropertyOptional({ example: 'John Doe' })
   @IsOptional()
   @IsString()
