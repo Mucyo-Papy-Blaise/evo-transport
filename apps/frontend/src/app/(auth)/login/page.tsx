@@ -177,14 +177,14 @@ export default function LoginPage() {
             />
 
             {/* Remember + Forgot */}
-            <div className="flex items-center justify-between text-sm">
+            {/* <div className="flex items-center justify-between text-sm">
               <Link
                 href="/forgot-password"
                 className="text-blue-600 hover:underline"
               >
                 Forgot Password
               </Link>
-            </div>
+            </div> */}
 
             {/* Error */}
             {error && (
