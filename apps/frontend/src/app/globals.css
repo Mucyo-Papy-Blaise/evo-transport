@@ -8,7 +8,7 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --button: oklch(0.83 0.16 145);
+  --button: #7fe284;
   --primary: oklch(0.76 0.10 250); /* #1DA1F2 - Twitter Blue */
   --primary-foreground: oklch(1 0 0); /* #FFFFFF */
   --secondary: oklch(0.97 0 0);
@@ -47,7 +47,7 @@
   --foreground: oklch(0.985 0 0);
   --card: #1e2939; /* RGB: 30, 41, 57 */
   --card-foreground: oklch(0.985 0 0);
-  --button: oklch(0.83 0.16 145);
+  --button: #7fe284;
   --popover: oklch(1 0 0);/* RGB: 30, 41, 57 */
   --popover-foreground: oklch(0.985 0 0);
   --primary: oklch(0.76 0.10 250); /* #1DA1F2 */

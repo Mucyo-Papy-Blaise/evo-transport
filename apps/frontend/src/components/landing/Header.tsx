@@ -18,6 +18,7 @@ import {
   Navigation,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth/auth-context";
+import { UserRole } from "@/types/enum";
 import Image from "next/image";
 
 const NAV_LINKS = [
@@ -43,6 +44,8 @@ export function Header() {
   const [activeSection, setActiveSection] = useState("home");
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { user, logout } = useAuth() as any;
+  const dashboardHref =
+    user?.role === UserRole.ADMIN ? "/admin/dashboard" : "/dashboard";
 
   // ── Scroll detection ────────────────────────────────────────────────────
   useEffect(() => {
@@ -119,9 +122,9 @@ export function Header() {
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
         className={cn(
-          "fixed top-0 left-0 right-0 z-50 transition-all duration-500",
+          "fixed top-0 left-0 right-0 z-50 transition-all duration-500 py-5",
           scrolled
-            ? "bg-background/95 backdrop-blur-xl shadow-sm border-b border-border"
+            ? "bg-primary backdrop-blur-xl shadow-sm border-b border-border py-1 md:py-5"
             : "bg-transparent",
         )}
       >
@@ -157,8 +160,8 @@ export function Header() {
                       "outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
                       scrolled
                         ? isActive
-                          ? "text-primary"
-                          : "text-foreground/70 hover:text-foreground"
+                          ? "text-white"
+                          : "text-white/70 hover:text-white"
                         : isActive
                           ? "text-white"
                           : "text-white/75 hover:text-white",
@@ -272,7 +275,7 @@ export function Header() {
                           {/* Links */}
                           {[
                             {
-                              href: "/admin/dashboard",
+                              href: dashboardHref,
                               label: "Dashboard",
                               icon: LayoutDashboard,
                             },
@@ -313,8 +316,8 @@ export function Header() {
                   className={cn(
                     "px-5 py-2 rounded-full text-sm font-semibold transition-all duration-200",
                     scrolled
-                      ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
-                      : "bg-white text-primary hover:bg-white/90 shadow-md",
+                      ? "bg-[#7fe284] text-black hover:bg-[#7fe284]/60 shadow-sm"
+                      : "bg-white text-black hover:bg-white/90 shadow-md",
                   )}
                 >
                   Login
@@ -461,7 +464,7 @@ export function Header() {
 
                     {[
                       {
-                        href: "/admin/dashboard",
+                        href: dashboardHref,
                         label: "Dashboard",
                         icon: LayoutDashboard,
                       },

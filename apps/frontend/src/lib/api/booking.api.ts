@@ -135,6 +135,14 @@ export const bookingApi = {
   getBookingMessages: (bookingId: string) =>
     apiClient.get<BookingMessage[]>(`/bookings/${bookingId}/messages`),
 
+  // Guest reads a message thread using bookingReference (public)
+  getGuestBookingMessages: (bookingId: string, bookingReference: string) =>
+    apiClient.get<BookingMessage[]>(
+      `/bookings/${bookingId}/messages/guest?bookingReference=${encodeURIComponent(
+        bookingReference,
+      )}`,
+    ),
+
   // Admin sends a message to the customer
   sendAdminMessage: (bookingId: string, data: SendMessageRequest) =>
     apiClient.post<BookingMessage>(`/bookings/${bookingId}/messages`, data),

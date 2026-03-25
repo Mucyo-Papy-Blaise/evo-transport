@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { Lock, Mail } from "lucide-react";
 import { ZodError } from "zod";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -193,13 +194,13 @@ export default function LoginPage() {
             )}
 
             {/* Button */}
-            <button
+            <Button
               type="submit"
               disabled={loading}
-              className="w-full bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary/60 cursor-pointer transition disabled:opacity-50"
+              className="w-full  text-white py-3 rounded-lg font-medium cursor-pointer transition disabled:opacity-50"
             >
               {loading ? "Signing in…" : "Login"}
-            </button>
+            </Button>
           </form>
 
           {/* Register link */}

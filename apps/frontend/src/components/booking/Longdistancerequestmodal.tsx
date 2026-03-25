@@ -377,7 +377,7 @@ export function LongDistanceRequestModal({ isOpen, onClose, context }: Props) {
                           Cancel
                         </Button>
                         <Button
-                          className="flex-1 h-12 gap-2 bg-primary cursor-pointer text-white"
+                          className="flex-1 h-12 gap-2 text-black cursor-pointer"
                           onClick={handleSubmit}
                           disabled={sendRequest.isPending}
                         >

@@ -820,6 +820,32 @@ export class BookingService {
     });
   }
 
+  /** Guest reads a booking thread using their bookingReference (public). */
+  async getGuestBookingMessages(
+    bookingId: string,
+    bookingReference: string,
+  ) {
+    if (!bookingReference?.trim()) {
+      throw new BadRequestException('bookingReference is required');
+    }
+
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: bookingId },
+      select: { id: true, bookingReference: true },
+    });
+
+    if (!booking) throw new NotFoundException('Booking not found');
+    if (booking.bookingReference !== bookingReference) {
+      throw new ForbiddenException('Booking reference does not match');
+    }
+
+    return this.prisma.bookingMessage.findMany({
+      where: { bookingId },
+      include: MESSAGE_INCLUDE,
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
   /** Mark messages as read (called when user/admin opens the thread). */
   async markMessagesRead(
     bookingId: string,

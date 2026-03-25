@@ -43,8 +43,7 @@ import { toast } from "@/components/ui/toast";
 // Hooks
 import {
   useBookingByReference,
-  useBookingMessages,
-  useSendCustomerMessage,
+  useGuestBookingMessages,
 } from "@/hooks/useBooking";
 import { BookingStatus } from "@/types";
 import type { BookingMessage } from "@/types/booking.types";
@@ -94,7 +93,10 @@ export default function BookingLookupContent() {
     error,
   } = useBookingByReference(bookingRef || "");
   const { data: messages = [], isLoading: messagesLoading } =
-    useBookingMessages(booking?.id || "");
+    useGuestBookingMessages(
+      booking?.id || "",
+      booking?.bookingReference || "",
+    );
   const [reply, setReply] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
