@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -66,7 +66,6 @@ function Step({
   );
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
 export function MapBookingSection() {
   const router = useRouter();
 
@@ -95,7 +94,6 @@ export function MapBookingSection() {
   const handleBookNow = useCallback(() => {
     if (!from || !to || !routeInfo) return;
 
-    // Write exactly what BookingPage reads from sessionStorage
     sessionStorage.setItem(
       "selectedRoute",
       JSON.stringify({
@@ -128,7 +126,7 @@ export function MapBookingSection() {
   return (
     <section id="map-booking" className="relative py-20 overflow-hidden">
       {/* ── Subtle background ── */}
-      <div className="absolute inset-0 bg-gradient-to-br from-muted/40 via-background to-primary/5 pointer-events-none" />
+      <div className="absolute inset-0 bg-linear-to-br from-muted/40 via-background to-primary/5 pointer-events-none" />
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
@@ -150,11 +148,13 @@ export function MapBookingSection() {
             Route Planner
           </p>
           <h2 className="text-3xl md:text-4xl font-bold text-foreground leading-tight">
-            Where are you <span className="text-po italic">going?</span>
+            Airport transfer to{" "}
+            <span className="text-po italic">your door</span>
           </h2>
           <p className="mt-2 text-sm text-muted-foreground max-w-md">
-            Pin your pickup and drop-off directly on the map, or type to search
-            any city in Europe.
+            We pick you up at <strong>Brussels Airport</strong> and drive you
+            directly home — anywhere within 200 km. Pin your destination on the
+            map or type your address below.
           </p>
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -396,7 +396,7 @@ export function MapBookingSection() {
                                             text-[11px] text-amber-700 dark:text-amber-400"
                             >
                               <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-px text-amber-500" />
-                              Over 400 km — admin approval needed.
+                              Over 200 km — admin approval needed.
                             </div>
                           )}
                         </div>
@@ -415,27 +415,25 @@ export function MapBookingSection() {
                 {/* Spacer */}
                 <div className="flex-1" />
 
-                {/* CTA — same button for all routes, long distance handled on booking page */}
+                {/* CTA */}
                 <div className="space-y-2 pt-1">
-                  {
-                    <Button
-                      className="w-full h-10 text-sm gap-2"
-                      onClick={handleBookNow}
-                      disabled={!bothSelected || isLoading || !routeInfo}
-                    >
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />{" "}
-                          Calculating…
-                        </>
-                      ) : (
-                        <>
-                          Continue to Booking{" "}
-                          <ArrowRight className="h-3.5 w-3.5" />
-                        </>
-                      )}
-                    </Button>
-                  }
+                  <Button
+                    className="w-full h-10 text-sm gap-2"
+                    onClick={handleBookNow}
+                    disabled={!bothSelected || isLoading || !routeInfo}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />{" "}
+                        Calculating…
+                      </>
+                    ) : (
+                      <>
+                        Continue to Booking{" "}
+                        <ArrowRight className="h-3.5 w-3.5" />
+                      </>
+                    )}
+                  </Button>
 
                   {(from || to) && (
                     <button
@@ -451,7 +449,7 @@ export function MapBookingSection() {
               </div>
             </div>
 
-            {/* ── RIGHT: Map (compact, fixed height) ── */}
+            {/* ── RIGHT: Map ── */}
             <div className="flex-1 relative" style={{ height: 460 }}>
               {/* Map label badges */}
               <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5 pointer-events-none">
@@ -476,7 +474,7 @@ export function MapBookingSection() {
                                border border-border rounded-full px-2.5 py-1 shadow-sm"
                   >
                     <div className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />
-                    <span className="text-[11px] font-semibold text-foreground max-w-[140px] truncate">
+                    <span className="text-[11px] font-semibold text-foreground max-w-35 truncate">
                       {to.city}
                     </span>
                   </motion.div>
@@ -502,7 +500,7 @@ export function MapBookingSection() {
           transition={{ delay: 0.3 }}
           className="mt-4 text-center text-xs text-muted-foreground"
         >
-          Routes over 400 km are handled as special requests and reviewed by our
+          Routes over 200 km are handled as special requests and reviewed by our
           team within 24h.
         </motion.p>
       </div>

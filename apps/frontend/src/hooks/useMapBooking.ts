@@ -1,51 +1,48 @@
-'use client';
+"use client";
 
-import { useState, useCallback, useEffect } from 'react';
-import { usePricingSettings } from '@/hooks/usePricingSettings';
-
+import { useState, useCallback, useEffect } from "react";
+import { usePricingSettings } from "@/hooks/usePricingSettings";
 
 export interface MapLocation {
-  name:      string;  
-  city:      string;
-  country:   string;
-  latitude:  number;
+  name: string;
+  city: string;
+  country: string;
+  latitude: number;
   longitude: number;
 }
 
 export interface RoutePriceResult {
-  distance:          number; 
-  price:             number;  
-  currency:          string;
+  distance: number;
+  price: number;
+  currency: string;
   estimatedDuration: string;
-  isLongDistance:    boolean; 
+  isLongDistance: boolean;
 }
 
-// Haversine distance (km) between two coordinates 
-
+// ─── Haversine distance (km) ──────────────────────────────────────────────────
 function haversineKm(a: MapLocation, b: MapLocation): number {
-  const R    = 6371;
-  const dLat = ((b.latitude  - a.latitude)  * Math.PI) / 180;
+  const R = 6371;
+  const dLat = ((b.latitude - a.latitude) * Math.PI) / 180;
   const dLon = ((b.longitude - a.longitude) * Math.PI) / 180;
   const h =
     Math.sin(dLat / 2) ** 2 +
-    Math.cos((a.latitude  * Math.PI) / 180) *
-    Math.cos((b.latitude  * Math.PI) / 180) *
-    Math.sin(dLon / 2) ** 2;
+    Math.cos((a.latitude * Math.PI) / 180) *
+      Math.cos((b.latitude * Math.PI) / 180) *
+      Math.sin(dLon / 2) ** 2;
   return Math.round(R * 2 * Math.asin(Math.sqrt(h)));
 }
 
-//  Duration from km 
+// ─── Duration estimate ────────────────────────────────────────────────────────
 function estimateDuration(km: number): string {
-  // Assume average road speed ~80 km/h
   const totalMins = Math.round((km / 80) * 60);
   const hours = Math.floor(totalMins / 60);
-  const mins  = totalMins % 60;
+  const mins = totalMins % 60;
   if (hours === 0) return `${mins}m`;
-  if (mins  === 0) return `${hours}h`;
+  if (mins === 0) return `${hours}h`;
   return `${hours}h ${mins}m`;
 }
 
-//  Mapbox Reverse Geocoding 
+// ─── Mapbox Reverse Geocoding ─────────────────────────────────────────────────
 export async function reverseGeocode(
   lat: number,
   lng: number,
@@ -55,46 +52,85 @@ export async function reverseGeocode(
     `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json` +
     `?access_token=${token}&types=place,locality,neighborhood,address&limit=1`;
 
-  const res  = await fetch(url);
+  const res = await fetch(url);
   const data = await res.json();
   const feat = data.features?.[0];
 
   if (!feat) {
-    return { name: `${lat.toFixed(4)}, ${lng.toFixed(4)}`, city: 'Unknown', country: 'Unknown', latitude: lat, longitude: lng };
+    return {
+      name: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+      city: "Unknown",
+      country: "Unknown",
+      latitude: lat,
+      longitude: lng,
+    };
   }
 
   const context: { id: string; text: string }[] = feat.context ?? [];
-  const city    = context.find((c) => c.id.startsWith('place') || c.id.startsWith('locality'))?.text ?? feat.text;
-  const country = context.find((c) => c.id.startsWith('country'))?.text ?? '';
+  const city =
+    context.find((c) => c.id.startsWith("place") || c.id.startsWith("locality"))
+      ?.text ?? feat.text;
+  const country = context.find((c) => c.id.startsWith("country"))?.text ?? "";
 
-  return { name: feat.place_name, city, country, latitude: lat, longitude: lng };
+  return {
+    name: feat.place_name,
+    city,
+    country,
+    latitude: lat,
+    longitude: lng,
+  };
 }
 
-// ─── Mapbox Forward Geocoding (search input) ──────────────────────────────────
-
-export async function forwardGeocode(query: string, token: string): Promise<MapLocation[]> {
+// ─── Mapbox Forward Geocoding ─────────────────────────────────────────────────
+// Key fixes vs original:
+//   1. Added `poi` to types  →  airports are POIs in Mapbox, omitting it hid them
+//   2. Added proximity bias  →  Brussels coordinates push local results to the top
+//   3. Added country bias    →  Belgium + neighbours ranked above global results
+//   4. Removed broad bbox    →  proximity handles scoping better than a hard bbox
+export async function forwardGeocode(
+  query: string,
+  token: string,
+): Promise<MapLocation[]> {
   if (!query.trim()) return [];
 
-  const url =
-    `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json` +
-    `?access_token=${token}&types=place,locality,address&bbox=-25,34,45,72&limit=5`;
+  const params = new URLSearchParams({
+    access_token: token,
+    autocomplete: "true",
+    language: "en",
+    limit: "6",
+    // ↓ Include poi so airports (which are POIs in Mapbox) appear in results
+    types: "place,locality,address,poi",
+    // ↓ Bias toward Brussels city centre — nearby results rank higher
+    proximity: "4.3517,50.8503",
+    // ↓ Prefer Belgium + neighbouring countries over the rest of the world
+    country: "BE,NL,DE,FR,LU,GB",
+  });
 
-  const res  = await fetch(url);
+  const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?${params.toString()}`;
+
+  const res = await fetch(url);
   const data = await res.json();
 
   return (data.features ?? []).map((feat: any) => {
     const context: { id: string; text: string }[] = feat.context ?? [];
-    const city    = context.find((c) => c.id.startsWith('place') || c.id.startsWith('locality'))?.text ?? feat.text;
-    const country = context.find((c) => c.id.startsWith('country'))?.text ?? '';
-    return { name: feat.place_name, city, country, latitude: feat.center[1], longitude: feat.center[0] };
+    const city =
+      context.find(
+        (c) => c.id.startsWith("place") || c.id.startsWith("locality"),
+      )?.text ?? feat.text;
+    const country = context.find((c) => c.id.startsWith("country"))?.text ?? "";
+    return {
+      name: feat.place_name,
+      city: city || feat.text,
+      country,
+      latitude: feat.center[1],
+      longitude: feat.center[0],
+    };
   });
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
-
-/** Used only when admin pricing API is unavailable. */
 const FALLBACK_PRICE_PER_KM = 2;
-const FALLBACK_CURRENCY = 'EUR';
+const FALLBACK_CURRENCY = "EUR";
 
 export function useMapBooking() {
   const {
@@ -103,18 +139,15 @@ export function useMapBooking() {
     isError: isPricingError,
   } = usePricingSettings();
 
-  const [from,        setFromState]   = useState<MapLocation | null>(null);
-  const [to,          setToState]     = useState<MapLocation | null>(null);
-  const [routeInfo,   setRouteInfo]   = useState<RoutePriceResult | null>(null);
-  const [isLoading,   setIsLoading]   = useState(false);
+  const [from, setFromState] = useState<MapLocation | null>(null);
+  const [to, setToState] = useState<MapLocation | null>(null);
+  const [routeInfo, setRouteInfo] = useState<RoutePriceResult | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [isGeocoding, setIsGeocoding] = useState(false);
-  const [error,       setError]       = useState<string | null>(null);
-  const [pinMode,     setPinMode]     = useState<'from' | 'to'>('from');
+  const [error, setError] = useState<string | null>(null);
+  const [pinMode, setPinMode] = useState<"from" | "to">("from");
 
-  // ── Calculate route entirely on the frontend ──────────────────────────────
-  // No backend call needed — distance comes from Haversine, price from config.
-  // The distance value is then sent to your existing createBooking endpoint
-  // as the `distance` field when the user submits the booking form.
+  // ── Route calculation (pure frontend, no backend) ─────────────────────────
   const calculateRoute = useCallback(
     (origin: MapLocation, destination: MapLocation) => {
       setIsLoading(true);
@@ -124,9 +157,7 @@ export function useMapBooking() {
         const km = haversineKm(origin, destination);
         const rateRaw = pricing?.effectivePricePerKm;
         const rate =
-          typeof rateRaw === 'number' &&
-          Number.isFinite(rateRaw) &&
-          rateRaw > 0
+          typeof rateRaw === "number" && Number.isFinite(rateRaw) && rateRaw > 0
             ? rateRaw
             : FALLBACK_PRICE_PER_KM;
         const price = Math.round(km * rate * 100) / 100;
@@ -136,10 +167,11 @@ export function useMapBooking() {
           price,
           currency: pricing?.currency ?? FALLBACK_CURRENCY,
           estimatedDuration: estimateDuration(km),
-          isLongDistance: km > 400,
+          // ↓ Changed from 400 → 200 to match the Brussels 200 km service area
+          isLongDistance: km > 200,
         });
       } catch {
-        setError('Could not calculate route. Please try again.');
+        setError("Could not calculate route. Please try again.");
         setRouteInfo(null);
       } finally {
         setIsLoading(false);
@@ -151,31 +183,34 @@ export function useMapBooking() {
   // Recalculate whenever both pins change
   useEffect(() => {
     if (from && to) calculateRoute(from, to);
-    else            setRouteInfo(null);
+    else setRouteInfo(null);
   }, [from, to, calculateRoute]);
 
-  // ── Map click → reverse geocode ──────────────────────────────────────────
-  const handleMapClick = useCallback(async (lat: number, lng: number) => {
-    const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? '';
-    setIsGeocoding(true);
-    try {
-      const location = await reverseGeocode(lat, lng, token);
-      if (pinMode === 'from') {
-        setFromState(location);
-        setPinMode('to');
-      } else {
-        setToState(location);
+  // ── Map click → reverse geocode ───────────────────────────────────────────
+  const handleMapClick = useCallback(
+    async (lat: number, lng: number) => {
+      const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
+      setIsGeocoding(true);
+      try {
+        const location = await reverseGeocode(lat, lng, token);
+        if (pinMode === "from") {
+          setFromState(location);
+          setPinMode("to");
+        } else {
+          setToState(location);
+        }
+      } catch {
+        setError("Could not identify location. Try clicking again.");
+      } finally {
+        setIsGeocoding(false);
       }
-    } catch {
-      setError('Could not identify location. Try clicking again.');
-    } finally {
-      setIsGeocoding(false);
-    }
-  }, [pinMode]);
+    },
+    [pinMode],
+  );
 
   const setFrom = useCallback((loc: MapLocation | null) => {
     setFromState(loc);
-    if (loc) setPinMode('to');
+    if (loc) setPinMode("to");
   }, []);
 
   const setTo = useCallback((loc: MapLocation | null) => {
@@ -192,7 +227,7 @@ export function useMapBooking() {
     setToState(null);
     setRouteInfo(null);
     setError(null);
-    setPinMode('from');
+    setPinMode("from");
   }, []);
 
   return {
