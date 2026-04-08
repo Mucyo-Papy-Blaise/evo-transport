@@ -9,6 +9,15 @@ export interface MapLocation {
   country: string;
   latitude: number;
   longitude: number;
+  /** Primary line in search dropdown (e.g. "Brussels Airport Zaventem (BRU)"). */
+  listTitle?: string;
+  /** Secondary line (stop detail). */
+  listSubtitle?: string;
+  /** IATA or similar when relevant. */
+  code?: string;
+  kind?: "airport" | "station" | "city" | "poi";
+  /** For grouping results by country. */
+  countryCode?: string;
 }
 
 export interface RoutePriceResult {
@@ -79,53 +88,6 @@ export async function reverseGeocode(
     latitude: lat,
     longitude: lng,
   };
-}
-
-// ─── Mapbox Forward Geocoding ─────────────────────────────────────────────────
-// Key fixes vs original:
-//   1. Added `poi` to types  →  airports are POIs in Mapbox, omitting it hid them
-//   2. Added proximity bias  →  Brussels coordinates push local results to the top
-//   3. Added country bias    →  Belgium + neighbours ranked above global results
-//   4. Removed broad bbox    →  proximity handles scoping better than a hard bbox
-export async function forwardGeocode(
-  query: string,
-  token: string,
-): Promise<MapLocation[]> {
-  if (!query.trim()) return [];
-
-  const params = new URLSearchParams({
-    access_token: token,
-    autocomplete: "true",
-    language: "en",
-    limit: "6",
-    // ↓ Include poi so airports (which are POIs in Mapbox) appear in results
-    types: "place,locality,address,poi",
-    // ↓ Bias toward Brussels city centre — nearby results rank higher
-    proximity: "4.3517,50.8503",
-    // ↓ Prefer Belgium + neighbouring countries over the rest of the world
-    country: "BE,NL,DE,FR,LU,GB",
-  });
-
-  const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?${params.toString()}`;
-
-  const res = await fetch(url);
-  const data = await res.json();
-
-  return (data.features ?? []).map((feat: any) => {
-    const context: { id: string; text: string }[] = feat.context ?? [];
-    const city =
-      context.find(
-        (c) => c.id.startsWith("place") || c.id.startsWith("locality"),
-      )?.text ?? feat.text;
-    const country = context.find((c) => c.id.startsWith("country"))?.text ?? "";
-    return {
-      name: feat.place_name,
-      city: city || feat.text,
-      country,
-      latitude: feat.center[1],
-      longitude: feat.center[0],
-    };
-  });
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────

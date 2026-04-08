@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/utils";
 
 import { useMapBooking } from "@/hooks/useMapBooking";
+import { MAP_BOOKING_PANEL_HEIGHT_PX } from "@/components/booking/mapBookingConstants";
 import { MapView } from "./Mapview";
 import { LocationSearchInput } from "./Locationsearchinput";
 
@@ -124,7 +125,7 @@ export function MapBookingSection() {
   }, [from, to, routeInfo, router]);
 
   return (
-    <section id="map-booking" className="relative py-20 overflow-hidden">
+    <section id="map-booking" className="relative py-20 overflow-x-clip">
       {/* ── Subtle background ── */}
       <div className="absolute inset-0 bg-linear-to-br from-muted/40 via-background to-primary/5 pointer-events-none" />
       <div
@@ -152,9 +153,8 @@ export function MapBookingSection() {
             <span className="text-po italic">your door</span>
           </h2>
           <p className="mt-2 text-sm text-muted-foreground max-w-md">
-            We pick you up at <strong>Brussels Airport</strong> and drive you
-            directly home — anywhere within 200 km. Pin your destination on the
-            map or type your address below.
+            Pin pickup and drop-off on the map, or search airports, stations,
+            and cities — like a shuttle stop list.
           </p>
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -200,13 +200,14 @@ export function MapBookingSection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ delay: 0.1 }}
-          className="rounded-2xl border border-border bg-background shadow-xl overflow-hidden"
+          className="rounded-2xl border border-border bg-background shadow-xl"
         >
           <div className="flex flex-col lg:flex-row">
-            {/* ── LEFT: Controls ── */}
+            {/* ── LEFT: Controls (overflow visible so location dropdowns are not clipped) ── */}
             <div
-              className="w-full lg:w-[300px] xl:w-[320px] shrink-0 flex flex-col
-                            border-b lg:border-b-0 lg:border-r border-border"
+              className="w-full lg:w-[min(100%,360px)] xl:w-[380px] shrink-0 flex flex-col
+                            border-b lg:border-b-0 lg:border-r border-border bg-background
+                            rounded-t-2xl lg:rounded-l-2xl lg:rounded-tr-none relative z-20"
             >
               {/* Step progress bar */}
               <div className="px-5 pt-5 pb-4 border-b border-border/60 bg-muted/20">
@@ -234,189 +235,190 @@ export function MapBookingSection() {
                 </div>
               </div>
 
-              {/* Inputs */}
-              <div className="p-5 flex flex-col gap-3 flex-1">
-                {/* Pin mode hint */}
-                <div
-                  className={cn(
-                    "flex items-center gap-2 text-[11px] font-semibold px-3 py-2 rounded-lg transition-all duration-300",
-                    pinMode === "from"
-                      ? "bg-emerald-50 text-button"
-                      : "bg-rose-50  text-rose-700 dark:text-rose-400",
-                  )}
-                >
+              {/* Inputs: upper block must stack above CTA so open dropdowns are not covered */}
+              <div className="p-5 flex flex-col flex-1 min-h-0">
+                <div className="relative z-50 flex flex-col gap-3">
+                  {/* Pin mode hint */}
                   <div
                     className={cn(
-                      "w-2 h-2 rounded-full animate-pulse",
-                      pinMode === "from" ? "bg-emerald-500" : "bg-rose-500",
+                      "flex items-center gap-2 text-xs font-semibold px-3 py-2.5 rounded-xl transition-all duration-300 border",
+                      pinMode === "from"
+                        ? "bg-button/15 text-foreground border-button/25 dark:bg-button/10"
+                        : "bg-primary/10 text-foreground border-primary/25 dark:bg-primary/15",
                     )}
-                  />
-                  {pinMode === "from"
-                    ? "Click map to set departure point"
-                    : "Click map to set destination"}
-                </div>
-
-                {/* From field */}
-                <div className="relative">
-                  <LocationSearchInput
-                    label="Departure"
-                    placeholder="Search city or click map…"
-                    value={from}
-                    onChange={(loc) => {
-                      setFrom(loc);
-                      if (loc) setPinMode("to");
-                    }}
-                    pinColor="emerald"
-                  />
-                </div>
-
-                {/* Swap button */}
-                <div className="flex items-center gap-3 -my-1">
-                  <div className="flex-1 h-px border-t border-dashed border-border" />
-                  <button
-                    onClick={swapLocations}
-                    disabled={!from && !to}
-                    title="Swap locations"
-                    className="p-1.5 rounded-full border border-border bg-background
-                               hover:bg-muted hover:border-primary/30 transition-all
-                               disabled:opacity-30 disabled:cursor-not-allowed shadow-sm"
                   >
-                    <ArrowLeftRight className="h-3.5 w-3.5 text-muted-foreground" />
-                  </button>
-                  <div className="flex-1 h-px border-t border-dashed border-border" />
-                </div>
+                    <div
+                      className={cn(
+                        "w-2 h-2 rounded-full animate-pulse shrink-0",
+                        pinMode === "from" ? "bg-button" : "bg-primary",
+                      )}
+                    />
+                    {pinMode === "from"
+                      ? "Click map to set departure point"
+                      : "Click map to set destination"}
+                  </div>
 
-                {/* To field */}
-                <LocationSearchInput
-                  label="Destination"
-                  placeholder="Search city or click map…"
-                  value={to}
-                  onChange={setTo}
-                  pinColor="rose"
-                />
+                  {/* From field */}
+                  <div className="relative z-10">
+                    <LocationSearchInput
+                      label="Departure"
+                      placeholder="Airport, station, or click map…"
+                      value={from}
+                      onChange={(loc) => {
+                        setFrom(loc);
+                        if (loc) setPinMode("to");
+                      }}
+                      variant="departure"
+                    />
+                  </div>
 
-                {/* ── Route info ── */}
-                <AnimatePresence>
-                  {bothSelected && (
-                    <motion.div
-                      key="route-info"
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.2 }}
+                  {/* Swap button */}
+                  <div className="flex items-center gap-3 -my-1">
+                    <div className="flex-1 h-px border-t border-dashed border-border" />
+                    <button
+                      onClick={swapLocations}
+                      disabled={!from && !to}
+                      title="Swap locations"
+                      className="p-1.5 rounded-full border border-border bg-background
+                                 hover:bg-muted hover:border-primary/30 transition-all
+                                 disabled:opacity-30 disabled:cursor-not-allowed shadow-sm"
                     >
-                      {isLoading ? (
-                        <div
-                          className="flex items-center justify-center gap-2 py-3
-                                        text-xs text-muted-foreground rounded-xl bg-muted/30 border border-border"
-                        >
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          Calculating route…
-                        </div>
-                      ) : routeInfo ? (
-                        <div
-                          className={cn(
-                            "rounded-xl border overflow-hidden",
-                            routeInfo.isLongDistance
-                              ? "border-amber-200 dark:border-amber-800"
-                              : "border-primary/20",
-                          )}
-                        >
-                          {/* Locations summary */}
-                          <div className="px-3 py-2.5 bg-muted/30 space-y-1.5">
-                            <div className="flex items-center gap-2">
-                              <MapPin
-                                className="h-3 w-3 text-emerald-500 shrink-0"
-                                fill="currentColor"
-                              />
-                              <span className="text-xs text-foreground font-medium truncate">
-                                {from?.city}, {from?.country}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <MapPin
-                                className="h-3 w-3 text-rose-500 shrink-0"
-                                fill="currentColor"
-                              />
-                              <span className="text-xs text-foreground font-medium truncate">
-                                {to?.city}, {to?.country}
-                              </span>
-                            </div>
-                          </div>
+                      <ArrowLeftRight className="h-3.5 w-3.5 text-muted-foreground" />
+                    </button>
+                    <div className="flex-1 h-px border-t border-dashed border-border" />
+                  </div>
 
-                          {/* Stats row */}
+                  {/* To field */}
+                  <LocationSearchInput
+                    label="Destination"
+                    placeholder="Airport, station, or click map…"
+                    value={to}
+                    onChange={setTo}
+                    variant="destination"
+                  />
+
+                  {/* ── Route info ── */}
+                  <AnimatePresence>
+                    {bothSelected && (
+                      <motion.div
+                        key="route-info"
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        {isLoading ? (
+                          <div
+                            className="flex items-center justify-center gap-2 py-3
+                                          text-xs text-muted-foreground rounded-xl bg-muted/30 border border-border"
+                          >
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            Calculating route…
+                          </div>
+                        ) : routeInfo ? (
                           <div
                             className={cn(
-                              "grid grid-cols-3 divide-x divide-border text-center",
+                              "rounded-xl border overflow-hidden",
                               routeInfo.isLongDistance
-                                ? "bg-amber-50/80 dark:bg-amber-950/20"
-                                : "bg-primary/5",
+                                ? "border-amber-200 dark:border-amber-800"
+                                : "border-primary/20",
                             )}
                           >
-                            {[
-                              {
-                                icon: Ruler,
-                                value: `${routeInfo.distance} km`,
-                                label: "Distance",
-                              },
-                              {
-                                icon: Clock,
-                                value: routeInfo.estimatedDuration,
-                                label: "Est. time",
-                              },
-                              {
-                                icon: null,
-                                value: `${routeInfo.price.toLocaleString()} ${routeInfo.currency}`,
-                                label: "From /person",
-                                accent: true,
-                              },
-                            ].map(({ icon: Icon, value, label, accent }) => (
-                              <div key={label} className="py-2.5 px-1">
-                                <div
-                                  className={cn(
-                                    "text-sm font-bold leading-tight",
-                                    accent ? "text-primary" : "text-foreground",
-                                  )}
-                                >
-                                  {value}
-                                </div>
-                                <div className="text-[10px] text-muted-foreground mt-0.5">
-                                  {label}
-                                </div>
+                            {/* Locations summary */}
+                            <div className="px-3 py-2.5 bg-muted/30 space-y-1.5">
+                              <div className="flex items-center gap-2">
+                                <MapPin
+                                  className="h-3 w-3 text-button shrink-0"
+                                  fill="currentColor"
+                                />
+                                <span className="text-xs text-foreground font-medium truncate">
+                                  {from?.city}, {from?.country}
+                                </span>
                               </div>
-                            ))}
-                          </div>
-
-                          {/* Long distance warning */}
-                          {routeInfo.isLongDistance && (
-                            <div
-                              className="flex items-start gap-2 px-3 py-2.5
-                                            bg-amber-50 dark:bg-amber-950/20
-                                            border-t border-amber-200 dark:border-amber-800
-                                            text-[11px] text-amber-700 dark:text-amber-400"
-                            >
-                              <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-px text-amber-500" />
-                              Over 200 km — admin approval needed.
+                              <div className="flex items-center gap-2">
+                                <MapPin
+                                  className="h-3 w-3 text-primary shrink-0"
+                                  fill="currentColor"
+                                />
+                                <span className="text-xs text-foreground font-medium truncate">
+                                  {to?.city}, {to?.country}
+                                </span>
+                              </div>
                             </div>
-                          )}
-                        </div>
-                      ) : error ? (
-                        <p
-                          className="text-xs text-destructive px-3 py-2 rounded-lg
-                                      bg-destructive/5 border border-destructive/20"
-                        >
-                          {error}
-                        </p>
-                      ) : null}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
 
-                {/* Spacer */}
-                <div className="flex-1" />
+                            {/* Stats row */}
+                            <div
+                              className={cn(
+                                "grid grid-cols-3 divide-x divide-border text-center",
+                                routeInfo.isLongDistance
+                                  ? "bg-amber-50/80 dark:bg-amber-950/20"
+                                  : "bg-primary/5",
+                              )}
+                            >
+                              {[
+                                {
+                                  icon: Ruler,
+                                  value: `${routeInfo.distance} km`,
+                                  label: "Distance",
+                                },
+                                {
+                                  icon: Clock,
+                                  value: routeInfo.estimatedDuration,
+                                  label: "Est. time",
+                                },
+                                {
+                                  icon: null,
+                                  value: `${routeInfo.price.toLocaleString()} ${routeInfo.currency}`,
+                                  label: "From /person",
+                                  accent: true,
+                                },
+                              ].map(({ icon: Icon, value, label, accent }) => (
+                                <div key={label} className="py-2.5 px-1">
+                                  <div
+                                    className={cn(
+                                      "text-sm font-bold leading-tight",
+                                      accent ? "text-primary" : "text-foreground",
+                                    )}
+                                  >
+                                    {value}
+                                  </div>
+                                  <div className="text-[10px] text-muted-foreground mt-0.5">
+                                    {label}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
 
-                {/* CTA */}
-                <div className="space-y-2 pt-1">
+                            {/* Long distance warning */}
+                            {routeInfo.isLongDistance && (
+                              <div
+                                className="flex items-start gap-2 px-3 py-2.5
+                                              bg-amber-50 dark:bg-amber-950/20
+                                              border-t border-amber-200 dark:border-amber-800
+                                              text-[11px] text-amber-700 dark:text-amber-400"
+                              >
+                                <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-px text-amber-500" />
+                                Over 400 km — admin approval needed.
+                              </div>
+                            )}
+                          </div>
+                        ) : error ? (
+                          <p
+                            className="text-xs text-destructive px-3 py-2 rounded-lg
+                                        bg-destructive/5 border border-destructive/20"
+                          >
+                            {error}
+                          </p>
+                        ) : null}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                <div className="flex-1 min-h-0 min-w-0" aria-hidden />
+
+                {/* CTA sits below in a lower stacking layer so it never covers dropdowns */}
+                <div className="relative z-10 shrink-0 space-y-2 pt-1">
                   <Button
                     className="w-full h-10 text-sm gap-2"
                     onClick={handleBookNow}
@@ -449,8 +451,11 @@ export function MapBookingSection() {
               </div>
             </div>
 
-            {/* ── RIGHT: Map ── */}
-            <div className="flex-1 relative" style={{ height: 460 }}>
+            {/* ── RIGHT: Map — overflow hidden only here so canvas respects rounded corners ── */}
+            <div
+              className="flex-1 relative min-h-[280px] overflow-hidden rounded-b-2xl lg:rounded-b-none lg:rounded-r-2xl z-0"
+              style={{ height: MAP_BOOKING_PANEL_HEIGHT_PX }}
+            >
               {/* Map label badges */}
               <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5 pointer-events-none">
                 {from && (
@@ -460,7 +465,7 @@ export function MapBookingSection() {
                     className="flex items-center gap-1.5 bg-background/90 backdrop-blur-sm
                                border border-border rounded-full px-2.5 py-1 shadow-sm"
                   >
-                    <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                    <div className="w-2 h-2 rounded-full bg-button shrink-0" />
                     <span className="text-[11px] font-semibold text-foreground max-w-[140px] truncate">
                       {from.city}
                     </span>
@@ -473,8 +478,8 @@ export function MapBookingSection() {
                     className="flex items-center gap-1.5 bg-background/90 backdrop-blur-sm
                                border border-border rounded-full px-2.5 py-1 shadow-sm"
                   >
-                    <div className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />
-                    <span className="text-[11px] font-semibold text-foreground max-w-35 truncate">
+                    <div className="w-2 h-2 rounded-full bg-primary shrink-0" />
+                    <span className="text-[11px] font-semibold text-foreground max-w-[140px] truncate">
                       {to.city}
                     </span>
                   </motion.div>
@@ -484,7 +489,6 @@ export function MapBookingSection() {
               <MapView
                 from={from}
                 to={to}
-                pinMode={pinMode}
                 isGeocoding={isGeocoding}
                 onMapClick={handleMapClick}
               />
