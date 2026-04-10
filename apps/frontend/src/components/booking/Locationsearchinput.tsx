@@ -1,52 +1,42 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
-import { Search, X, MapPin, Loader2, PlaneLanding } from "lucide-react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { Search, X, MapPin, Loader2 } from "lucide-react";
 import { cn } from "@/utils/utils";
-import { forwardGeocode, type MapLocation } from "@/hooks/useMapBooking";
+import type { MapLocation } from "@/hooks/useMapBooking";
+import {
+  groupSearchResults,
+  searchBookingLocations,
+} from "@/lib/bookingLocationSearch";
 
-// ─── Brussels-area airports — always surfaced first ───────────────────────────
+export type LocationFieldVariant = "departure" | "destination";
+
 const BRUSSELS_AIRPORTS: MapLocation[] = [
   {
-    name: "Brussels Airport (BRU) — Zaventem",
-    city: "Brussels Airport",
+    latitude: 50.901389,
+    longitude: 4.484444,
+    city: "Brussels",
     country: "Belgium",
-    latitude: 50.9014,
-    longitude: 4.4844,
+    listTitle: "Brussels Airport (BRU)",
+    name: "Brussels-Zaventem",
   },
   {
-    name: "Brussels South Charleroi Airport (CRL)",
-    city: "Brussels South Charleroi Airport",
+    latitude: 50.477222,
+    longitude: 4.461389,
+    city: "Brussels",
     country: "Belgium",
-    latitude: 50.4592,
-    longitude: 4.4537,
+    listTitle: "Brussels South (CRL)",
+    name: "Brussels-Charleroi",
   },
 ];
-
-/** Returns the two Brussels airports whose name/city matches the query */
-function matchAirports(q: string): MapLocation[] {
-  if (!q.trim()) return BRUSSELS_AIRPORTS; // show both when field is empty/focused
-  const lower = q.toLowerCase();
-  return BRUSSELS_AIRPORTS.filter(
-    (a) =>
-      a.name.toLowerCase().includes(lower) ||
-      a.city.toLowerCase().includes(lower) ||
-      // common shorthand: "bru", "crl", "charleroi", "zaventem", "airport"
-      lower.includes("airport") ||
-      lower.includes("bru") ||
-      lower.includes("crl") ||
-      lower.includes("zaventem") ||
-      lower.includes("charleroi") ||
-      lower.includes("brussels"),
-  );
-}
 
 interface LocationSearchInputProps {
   value: MapLocation | null;
   onChange: (loc: MapLocation | null) => void;
   placeholder: string;
   label: string;
-  pinColor: "emerald" | "rose";
+  /** Departure uses `--button` (brand green); destination uses `--primary`. */
+  variant: LocationFieldVariant;
   disabled?: boolean;
 }
 
@@ -55,7 +45,7 @@ export function LocationSearchInput({
   onChange,
   placeholder,
   label,
-  pinColor,
+  variant,
   disabled = false,
 }: LocationSearchInputProps) {
   const [query, setQuery] = useState("");
@@ -66,7 +56,8 @@ export function LocationSearchInput({
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // ── Debounced search ────────────────────────────────────────────────────────
+  const grouped = useMemo(() => groupSearchResults(results), [results]);
+
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
@@ -80,49 +71,8 @@ export function LocationSearchInput({
       setSearching(true);
       try {
         const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
-
-        // Build URL manually so we can add proximity + country bias
-        const params = new URLSearchParams({
-          access_token: token,
-          autocomplete: "true",
-          language: "en",
-          limit: "6",
-          // Bias results toward the Brussels region
-          proximity: "4.3517,50.8503",
-          // Prefer Belgium + neighbouring countries
-          country: "BE,NL,DE,FR,LU,GB",
-          types: "place,locality,address,poi",
-        });
-
-        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
-          query,
-        )}.json?${params.toString()}`;
-
-        const res = await fetch(url);
-        const data = await res.json();
-
-        const geocoded: MapLocation[] = (data.features ?? []).map((f: any) => ({
-          name: f.place_name,
-          city: f.text || f.place_name.split(",")[0],
-          country:
-            f.context?.find((c: any) => c.id.startsWith("country"))?.text ?? "",
-          latitude: f.center[1],
-          longitude: f.center[0],
-        }));
-
-        // Pinned airports that match the query come first, then geocoded results
-        const pinned = matchAirports(query);
-        // Deduplicate: remove geocoded entries that overlap with a pinned airport
-        const deduped = geocoded.filter(
-          (g) =>
-            !pinned.some(
-              (a) =>
-                Math.abs(a.latitude - g.latitude) < 0.05 &&
-                Math.abs(a.longitude - g.longitude) < 0.05,
-            ),
-        );
-
-        setResults([...pinned, ...deduped]);
+        const locs = await searchBookingLocations(query, token);
+        setResults(locs);
       } finally {
         setSearching(false);
       }
@@ -165,23 +115,22 @@ export function LocationSearchInput({
     [onChange],
   );
 
-  const isAirport = (loc: MapLocation) =>
-    BRUSSELS_AIRPORTS.some(
-      (a) =>
-        Math.abs(a.latitude - loc.latitude) < 0.05 &&
-        Math.abs(a.longitude - loc.longitude) < 0.05,
-    );
-
-  const colorClass = { emerald: "text-emerald-500", rose: "text-rose-500" }[
-    pinColor
-  ];
-  const ringClass = { emerald: "ring-emerald-300", rose: "ring-rose-300" }[
-    pinColor
-  ];
+  const accent =
+    variant === "departure"
+      ? {
+          icon: "text-button",
+          ring: "ring-button/45",
+          borderOpen: "border-button/50",
+        }
+      : {
+          icon: "text-primary",
+          ring: "ring-primary/40",
+          borderOpen: "border-primary/45",
+        };
 
   return (
-    <div ref={containerRef} className="relative w-full">
-      <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+    <div ref={containerRef} className="relative z-[1] w-full">
+      <label className="block text-[13px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
         {label}
       </label>
 
@@ -197,20 +146,24 @@ export function LocationSearchInput({
           }
         }}
         className={cn(
-          "relative flex items-center gap-2 h-12 w-full rounded-lg border border-input bg-background px-3",
+          "relative flex items-center gap-3 min-h-[3.25rem] w-full rounded-xl border bg-background px-4 py-3.5",
           "cursor-text transition-all duration-150",
-          open && `ring-2 ${ringClass} border-transparent`,
+          open
+            ? cn("ring-2 ring-offset-0", accent.ring, accent.borderOpen)
+            : "border-input",
           disabled && "opacity-50 cursor-not-allowed",
         )}
       >
-        <MapPin className={cn("h-4 w-4 shrink-0", colorClass)} />
+        <MapPin className={cn("h-5 w-5 shrink-0", accent.icon)} />
 
         {open || !value ? (
           <input
             ref={inputRef}
-            className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            className="flex-1 bg-transparent text-base leading-normal outline-none placeholder:text-muted-foreground min-w-0"
             placeholder={
-              open ? "Type a city, address or airport…" : placeholder
+              open
+                ? "Airport, station, or city…"
+                : placeholder
             }
             value={query}
             disabled={disabled}
@@ -232,20 +185,21 @@ export function LocationSearchInput({
             }}
           />
         ) : (
-          <span className="flex-1 text-sm truncate">
-            {value.city}, {value.country}
+          <span className="flex-1 text-base truncate">
+            {value.listTitle ?? `${value.city}, ${value.country}`}
           </span>
         )}
 
         {searching && (
-          <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />
+          <Loader2 className="h-5 w-5 shrink-0 animate-spin text-muted-foreground" />
         )}
         {value && !open && (
           <button
+            type="button"
             onClick={handleClear}
-            className="rounded-full p-0.5 hover:bg-muted transition-colors text-muted-foreground"
+            className="rounded-full p-1 hover:bg-muted transition-colors text-muted-foreground shrink-0"
           >
-            <X className="h-3.5 w-3.5" />
+            <X className="h-4 w-4" />
           </button>
         )}
       </div>
@@ -253,83 +207,70 @@ export function LocationSearchInput({
       {/* ── Dropdown ── */}
       {open && (
         <div
-          className="absolute z-50 mt-1.5 w-full rounded-xl border border-border
-                     bg-popover shadow-xl max-h-64 overflow-y-auto
-                     animate-in fade-in-0 zoom-in-95 duration-150"
+          role="listbox"
+          className={cn(
+            "absolute left-0 right-0 z-[200] mt-2 rounded-xl border border-border bg-popover",
+            "shadow-2xl ring-1 ring-black/5 dark:ring-white/10",
+            "max-h-[min(26rem,calc(100vh-10rem))] overflow-y-auto overscroll-contain",
+            "scroll-pb-4 pb-1",
+            "animate-in fade-in-0 zoom-in-95 duration-150",
+          )}
         >
           {results.length === 0 && !searching && query.length > 1 ? (
             <div className="flex flex-col items-center py-8 gap-2 text-sm text-muted-foreground">
               <Search className="h-5 w-5 opacity-40" />
               No results for &quot;{query}&quot;
             </div>
+          ) : results.length === 0 && !searching ? (
+            <div className="py-6 text-center text-xs text-muted-foreground">
+              Start typing an airport, station, or city…
+            </div>
           ) : (
-            <ul>
-              {/* Section header when airports are shown */}
-              {results.some(isAirport) && (
-                <li className="px-4 pt-2.5 pb-1">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Brussels Airports
-                  </span>
-                </li>
-              )}
-
-              {results.map((loc, i) => {
-                const airport = isAirport(loc);
-                const isLastAirport =
-                  airport &&
-                  (i === results.length - 1 || !isAirport(results[i + 1]));
-
-                return (
-                  <li key={`${loc.latitude}-${loc.longitude}`}>
-                    {/* Divider between airports and regular results */}
-                    {isLastAirport && i < results.length - 1 && (
-                      <div className="mx-4 my-1 border-t border-border/60" />
-                    )}
-                    {/* Section header for regular results */}
-                    {!airport && (i === 0 || isAirport(results[i - 1])) && (
-                      <div className="px-4 pt-1 pb-1">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                          Other locations
-                        </span>
-                      </div>
-                    )}
-
-                    <div
-                      onClick={() => handleSelect(loc)}
-                      className={cn(
-                        "flex items-start gap-3 px-4 py-2.5 cursor-pointer transition-colors",
-                        airport ? "hover:bg-primary/5" : "hover:bg-muted/70",
-                        i !== results.length - 1 && "border-b border-border/40",
-                      )}
-                    >
-                      {airport ? (
-                        <PlaneLanding
-                          className={cn("h-4 w-4 shrink-0 mt-0.5", colorClass)}
-                        />
-                      ) : (
-                        <MapPin
-                          className={cn("h-4 w-4 shrink-0 mt-0.5", colorClass)}
-                        />
-                      )}
-                      <div className="min-w-0">
-                        <p
-                          className={cn(
-                            "text-sm font-medium truncate",
-                            airport ? "text-foreground" : "text-foreground",
-                          )}
+            <div className="pb-3">
+              {grouped.map((group) => (
+                <div key={group.country}>
+                  <div
+                    className="sticky top-0 z-[1] px-4 py-2 text-[11px] font-bold uppercase tracking-wider
+                              text-muted-foreground bg-muted/90 backdrop-blur-sm border-b border-border/60"
+                  >
+                    {group.country}
+                  </div>
+                  <ul className="pb-0">
+                    {group.items.map((loc) => {
+                      const primary =
+                        loc.listTitle ??
+                        `${loc.city}${loc.country ? `, ${loc.country}` : ""}`;
+                      const secondary = loc.listSubtitle ?? loc.name;
+                      return (
+                        <li
+                          key={`${loc.latitude}-${loc.longitude}-${primary}`}
+                          role="option"
+                          onClick={() => handleSelect(loc)}
+                          className="flex items-start gap-3 px-4 py-3.5 cursor-pointer hover:bg-muted/70 transition-colors border-b border-border/40 last:border-b-0"
                         >
-                          {loc.city}
-                          {loc.country ? `, ${loc.country}` : ""}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {loc.name}
-                        </p>
-                      </div>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
+                          <MapPin
+                            className={cn(
+                              "h-5 w-5 shrink-0 mt-0.5",
+                              accent.icon,
+                            )}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[15px] font-semibold text-foreground leading-snug">
+                              {primary}
+                            </p>
+                            {secondary && secondary !== primary && (
+                              <p className="text-sm text-muted-foreground mt-1 leading-snug line-clamp-2">
+                                {secondary}
+                              </p>
+                            )}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}
