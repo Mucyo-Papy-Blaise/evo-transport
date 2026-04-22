@@ -1,4 +1,5 @@
 import type { MapLocation } from "@/hooks/useMapBooking";
+import { searchBelgiumShuttleLocations } from "@/data/belgiumShuttleLocations";
 import { searchTransportHubs } from "@/data/transportHubs";
 
 export type GroupedSearchResults = { country: string; items: MapLocation[] };
@@ -151,6 +152,8 @@ async function forwardGeocodePlaces(
  * Prefer curated airports/stations (Flibco-style), then Mapbox POI.
  * When hubs already match, skip generic city rows — same idea as Flibco’s stop list.
  */
+const MAX_MERGED_RESULTS = 20;
+
 export async function searchBookingLocations(
   query: string,
   token: string,
@@ -158,10 +161,21 @@ export async function searchBookingLocations(
   const q = query.trim();
   if (!q) return [];
 
+  const belgium = searchBelgiumShuttleLocations(q, 24);
   const hubs = searchTransportHubs(q, 12);
 
+  const merged: MapLocation[] = [...belgium];
+
+  const nearAny = (loc: MapLocation, km: number) =>
+    merged.some((o) => haversineKm(o, loc) < km);
+
+  for (const h of hubs) {
+    if (nearAny(h, 1.2)) continue;
+    merged.push(h);
+  }
+
   if (!token) {
-    return hubs;
+    return merged.slice(0, MAX_MERGED_RESULTS);
   }
 
   const [pois, places] = await Promise.all([
@@ -169,22 +183,17 @@ export async function searchBookingLocations(
     forwardGeocodePlaces(q, token),
   ]);
 
-  const merged: MapLocation[] = [...hubs];
-
-  const nearAny = (loc: MapLocation, km: number) =>
-    merged.some((o) => haversineKm(o, loc) < km);
-
   for (const p of pois) {
     if (nearAny(p, 2.5)) continue;
     merged.push(p);
   }
 
-  if (hubs.length === 0) {
+  if (belgium.length === 0 && hubs.length === 0) {
     for (const p of places) {
       if (nearAny(p, 1.5)) continue;
       merged.push(p);
     }
   }
 
-  return merged.slice(0, 12);
+  return merged.slice(0, MAX_MERGED_RESULTS);
 }

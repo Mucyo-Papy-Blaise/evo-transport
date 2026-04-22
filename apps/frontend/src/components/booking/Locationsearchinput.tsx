@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Search, X, MapPin, Loader2 } from "lucide-react";
 import { cn } from "@/utils/utils";
 import type { MapLocation } from "@/hooks/useMapBooking";
+import { getDefaultBelgiumShuttleSuggestions } from "@/data/belgiumShuttleLocations";
 import {
   groupSearchResults,
   searchBookingLocations,
@@ -11,24 +12,8 @@ import {
 
 export type LocationFieldVariant = "departure" | "destination";
 
-const BRUSSELS_AIRPORTS: MapLocation[] = [
-  {
-    latitude: 50.901389,
-    longitude: 4.484444,
-    city: "Brussels",
-    country: "Belgium",
-    listTitle: "Brussels Airport (BRU)",
-    name: "Brussels-Zaventem",
-  },
-  {
-    latitude: 50.477222,
-    longitude: 4.461389,
-    city: "Brussels",
-    country: "Belgium",
-    listTitle: "Brussels South (CRL)",
-    name: "Brussels-Charleroi",
-  },
-];
+/** Open dropdown with no query — airports + featured stations from JSON config. */
+const DEFAULT_SUGGESTIONS = getDefaultBelgiumShuttleSuggestions();
 
 interface LocationSearchInputProps {
   value: MapLocation | null;
@@ -61,9 +46,9 @@ export function LocationSearchInput({
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
-    // No query → just show the two airports
+    // No query → featured stops from src/config/belgiumShuttleLocations.json
     if (!query.trim()) {
-      setResults(BRUSSELS_AIRPORTS);
+      setResults(DEFAULT_SUGGESTIONS);
       return;
     }
 
@@ -109,7 +94,7 @@ export function LocationSearchInput({
       e.stopPropagation();
       onChange(null);
       setQuery("");
-      setResults(BRUSSELS_AIRPORTS);
+      setResults(DEFAULT_SUGGESTIONS);
       setTimeout(() => inputRef.current?.focus(), 50);
     },
     [onChange],
@@ -140,8 +125,8 @@ export function LocationSearchInput({
         onClick={() => {
           if (!disabled) {
             setOpen(true);
-            // Show airports immediately on focus
-            if (!query.trim()) setResults(BRUSSELS_AIRPORTS);
+            // Show featured config stops immediately on focus
+            if (!query.trim()) setResults(DEFAULT_SUGGESTIONS);
             inputRef.current?.focus();
           }
         }}
@@ -173,7 +158,7 @@ export function LocationSearchInput({
             }}
             onFocus={() => {
               setOpen(true);
-              if (!query.trim()) setResults(BRUSSELS_AIRPORTS);
+              if (!query.trim()) setResults(DEFAULT_SUGGESTIONS);
             }}
             onKeyDown={(e) => {
               if (e.key === "Escape") {
