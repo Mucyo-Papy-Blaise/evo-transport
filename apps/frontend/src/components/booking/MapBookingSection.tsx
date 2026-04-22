@@ -67,6 +67,10 @@ function Step({
   );
 }
 
+/**
+ * Route planner: pickup / drop-off on the map. Searchable Belgium locations
+ * (Flibco-style list) live in `src/config/belgiumShuttleLocations.json`.
+ */
 export function MapBookingSection() {
   const router = useRouter();
 

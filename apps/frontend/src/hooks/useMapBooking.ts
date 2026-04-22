@@ -15,7 +15,7 @@ export interface MapLocation {
   listSubtitle?: string;
   /** IATA or similar when relevant. */
   code?: string;
-  kind?: "airport" | "station" | "city" | "poi";
+  kind?: "airport" | "station" | "city" | "poi" | "hotel";
   /** For grouping results by country. */
   countryCode?: string;
 }
