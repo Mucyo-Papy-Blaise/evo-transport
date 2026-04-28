@@ -149,6 +149,31 @@ async function forwardGeocodePlaces(
 }
 
 /**
+ * Full-address forward geocode (no bbox) when curated + restricted search
+ * returns nothing — used for “enter address manually” before booking.
+ */
+export async function geocodeFreeformAddress(
+  address: string,
+  token: string,
+): Promise<MapLocation[]> {
+  const q = address.trim();
+  if (!q || !token) return [];
+
+  const url =
+    `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(q)}.json` +
+    `?access_token=${token}` +
+    `&types=address,place,locality,neighborhood,poi` +
+    `&limit=8`;
+
+  const res = await fetch(url);
+  if (!res.ok) return [];
+  const data = await res.json();
+  const features = (data.features ?? []) as MapboxGeocodeFeature[];
+
+  return features.map((f) => mapboxFeatureToLocation(f));
+}
+
+/**
  * Prefer curated airports/stations (Flibco-style), then Mapbox POI.
  * When hubs already match, skip generic city rows — same idea as Flibco’s stop list.
  */

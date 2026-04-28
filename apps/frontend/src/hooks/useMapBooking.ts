@@ -15,7 +15,7 @@ export interface MapLocation {
   listSubtitle?: string;
   /** IATA or similar when relevant. */
   code?: string;
-  kind?: "airport" | "station" | "city" | "poi" | "hotel";
+  kind?: "airport" | "station" | "city" | "poi" | "hotel" | "manual";
   /** For grouping results by country. */
   countryCode?: string;
 }
@@ -49,6 +49,10 @@ function estimateDuration(km: number): string {
   if (hours === 0) return `${mins}m`;
   if (mins === 0) return `${hours}h`;
   return `${hours}h ${mins}m`;
+}
+
+function hasValidCoords(loc: MapLocation): boolean {
+  return Number.isFinite(loc.latitude) && Number.isFinite(loc.longitude);
 }
 
 // ─── Mapbox Reverse Geocoding ─────────────────────────────────────────────────
@@ -144,8 +148,19 @@ export function useMapBooking() {
 
   // Recalculate whenever both pins change
   useEffect(() => {
-    if (from && to) calculateRoute(from, to);
-    else setRouteInfo(null);
+    if (from && to) {
+      const hasManual = from.kind === "manual" || to.kind === "manual";
+      if (hasManual || !hasValidCoords(from) || !hasValidCoords(to)) {
+        // Manual free-text / link entries can continue booking without map pricing.
+        setRouteInfo(null);
+        setIsLoading(false);
+        setError(null);
+        return;
+      }
+      calculateRoute(from, to);
+      return;
+    }
+    setRouteInfo(null);
   }, [from, to, calculateRoute]);
 
   // ── Map click → reverse geocode ───────────────────────────────────────────
