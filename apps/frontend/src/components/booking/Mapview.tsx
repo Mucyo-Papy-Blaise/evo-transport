@@ -16,6 +16,14 @@ interface MapViewProps {
   onMapClick: (lat: number, lng: number) => void;
 }
 
+function hasValidCoords(loc: MapLocation | null): loc is MapLocation {
+  return (
+    !!loc &&
+    Number.isFinite(loc.latitude) &&
+    Number.isFinite(loc.longitude)
+  );
+}
+
 const EMPTY_ROUTE: GeoJSON.Feature<GeoJSON.LineString> = {
   type: 'Feature',
   geometry: { type: 'LineString', coordinates: [] },
@@ -170,7 +178,7 @@ export function MapView({ from, to, isGeocoding, onMapClick }: MapViewProps) {
     const map = mapRef.current;
     if (!map) return;
     fromMarker.current?.remove();
-    if (from) {
+    if (hasValidCoords(from)) {
       fromMarker.current = new mapboxgl.Marker({
         element: createPinElement(from.city || from.name, "departure"),
         anchor: "bottom",
@@ -182,7 +190,7 @@ export function MapView({ from, to, isGeocoding, onMapClick }: MapViewProps) {
     const map = mapRef.current;
     if (!map) return;
     toMarker.current?.remove();
-    if (to) {
+    if (hasValidCoords(to)) {
       toMarker.current = new mapboxgl.Marker({
         element: createPinElement(to.city || to.name, "destination"),
         anchor: "bottom",
@@ -201,7 +209,7 @@ export function MapView({ from, to, isGeocoding, onMapClick }: MapViewProps) {
 
       if (from || to) hadAnyPinRef.current = true;
 
-      if (from && to) {
+      if (hasValidCoords(from) && hasValidCoords(to)) {
         source.setData(buildArc(from, to));
         const bounds = new mapboxgl.LngLatBounds()
           .extend([from.longitude, from.latitude])
@@ -212,7 +220,7 @@ export function MapView({ from, to, isGeocoding, onMapClick }: MapViewProps) {
 
       source.setData(EMPTY_ROUTE);
 
-      if (from) {
+      if (hasValidCoords(from)) {
         map.flyTo({
           center: [from.longitude, from.latitude],
           zoom: Math.max(map.getZoom(), 6.2),
@@ -221,7 +229,7 @@ export function MapView({ from, to, isGeocoding, onMapClick }: MapViewProps) {
         return;
       }
 
-      if (to) {
+      if (hasValidCoords(to)) {
         map.flyTo({
           center: [to.longitude, to.latitude],
           zoom: Math.max(map.getZoom(), 6.2),

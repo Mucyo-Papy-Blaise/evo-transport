@@ -94,10 +94,19 @@ export function MapBookingSection() {
   } = useMapBooking();
 
   const bothSelected = !!(from && to);
+  const hasManualEntry = from?.kind === "manual" || to?.kind === "manual";
+  const canContinueBooking = bothSelected && !isLoading && (hasManualEntry || !!routeInfo);
   const currentStep = !from ? 1 : !to ? 2 : 3;
 
   const handleBookNow = useCallback(() => {
-    if (!from || !to || !routeInfo) return;
+    if (!from || !to) return;
+    const effectiveRoute = routeInfo ?? {
+      distance: 0,
+      estimatedDuration: "To be confirmed",
+      price: 0,
+      currency: pricing?.currency ?? "EUR",
+      isLongDistance: false,
+    };
 
     sessionStorage.setItem(
       "selectedRoute",
@@ -108,25 +117,25 @@ export function MapBookingSection() {
         toCity: to.city,
         fromCode: "",
         toCode: "",
-        distance: routeInfo.distance,
+        distance: effectiveRoute.distance,
         shuttle: {
           id: "map-booking",
           provider: "EVO Transport",
           vehicleType: "Shuttle",
           departureTime: "09:00",
           arrivalTime: "",
-          duration: routeInfo.estimatedDuration,
-          price: routeInfo.price,
-          currency: routeInfo.currency,
+          duration: effectiveRoute.estimatedDuration,
+          price: effectiveRoute.price,
+          currency: effectiveRoute.currency,
           availableSeats: 12,
           amenities: [],
-          distance: routeInfo.distance,
+          distance: effectiveRoute.distance,
         },
       }),
     );
 
     router.push("/booking");
-  }, [from, to, routeInfo, router]);
+  }, [from, to, routeInfo, router, pricing?.currency]);
 
   return (
     <section id="map-booking" className="relative py-20 overflow-x-clip">
@@ -158,7 +167,9 @@ export function MapBookingSection() {
           </h2>
           <p className="mt-2 text-sm text-muted-foreground max-w-md">
             Pin pickup and drop-off on the map, or search airports, stations,
-            and cities — like a shuttle stop list.
+            and cities. If nothing matches, use{" "}
+            <span className="text-foreground font-medium">Enter address manually</span>{" "}
+            to type a full address and continue to booking.
           </p>
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -406,6 +417,11 @@ export function MapBookingSection() {
                               </div>
                             )}
                           </div>
+                        ) : hasManualEntry ? (
+                          <div className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5 text-xs text-foreground">
+                            Manual location captured. Route distance and price will be
+                            confirmed after booking request review.
+                          </div>
                         ) : error ? (
                           <p
                             className="text-xs text-destructive px-3 py-2 rounded-lg
@@ -426,7 +442,7 @@ export function MapBookingSection() {
                   <Button
                     className="w-full h-10 text-sm gap-2"
                     onClick={handleBookNow}
-                    disabled={!bothSelected || isLoading || !routeInfo}
+                    disabled={!canContinueBooking}
                   >
                     {isLoading ? (
                       <>
