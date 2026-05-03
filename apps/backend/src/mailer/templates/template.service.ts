@@ -3,6 +3,7 @@ import { wrapEmailContent } from './base.template';
 import { EMAIL_TEMPLATES, getTemplate, TemplateCategory } from './index';
 import { EmailMetadata, EmailTemplate } from '../types/mailer';
 import { getPlatformName } from './template.utils';
+import { getMailerConfig } from '../mailer.config';
 
 // Handles email template rendering and variable replacement
 @Injectable()
@@ -184,12 +185,13 @@ export class TemplateService {
     category: TemplateCategory,
     templateKey: string,
   ): Record<string, string | number | Date> {
+    const { frontendUrl, appName } = getMailerConfig();
     const commonData = {
       firstName: 'John',
       lastName: 'Doe',
       email: 'john.doe@example.com',
-      platformName: getPlatformName({}),
-      loginUrl: 'https://lms.example.com/login',
+      platformName: appName,
+      loginUrl: `${frontendUrl}/login`,
     };
 
     // Template-specific sample data
@@ -200,7 +202,7 @@ export class TemplateService {
       },
       'AUTH.PASSWORD_RESET': {
         ...commonData,
-        resetUrl: 'https://lms.example.com/reset-password?token=abc123',
+        resetUrl: `${frontendUrl}/reset-password?token=abc123`,
         expiryHours: 1,
       },
       'AUTH.OTP_LOGIN': {
@@ -210,7 +212,7 @@ export class TemplateService {
       },
       'AUTH.EMAIL_VERIFICATION': {
         ...commonData,
-        verificationUrl: 'https://lms.example.com/verify?token=abc123',
+        verificationUrl: `${frontendUrl}/verify-email?token=abc123`,
         verificationCode: 'ABC123XYZ',
         expiryHours: 24,
       },
@@ -224,19 +226,19 @@ export class TemplateService {
       'AUTH.ACCOUNT_DEACTIVATED': {
         ...commonData,
         reason: 'Account inactive for 90 days',
-        reactivationUrl: 'https://lms.example.com/reactivate',
+        reactivationUrl: `${frontendUrl}/reactivate`,
       },
       'AUTH.REGISTRATION_PENDING': {
         ...commonData,
       },
       'AUTH.ADMIN_NEW_REGISTRATION': {
         ...commonData,
-        adminUrl: 'https://lms.example.com/admin/registrations',
+        adminUrl: `${frontendUrl}/admin/registrations`,
       },
       'AUTH.PASSWORD_CHANGED': {
         ...commonData,
         changedAt: new Date().toLocaleString(),
-        supportUrl: 'https://lms.example.com/support',
+        supportUrl: `${frontendUrl}/support`,
       },
     };
     const key = `${category}.${templateKey}`;

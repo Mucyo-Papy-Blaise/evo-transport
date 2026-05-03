@@ -21,6 +21,10 @@ import {
 import { ResponseUtil } from 'src/utils/response.util';
 import { ErrorUtil } from 'src/utils/error.util';
 import { MailerService } from 'src/mailer/mailer.service';
+import {
+  getDefaultEmailMetadata,
+  getMailerConfig,
+} from 'src/mailer/mailer.config';
 import { AccountStatus, User, UserRole } from '@prisma/client';
 import { RegisterDto } from './dto/register.dto';
 
@@ -231,7 +235,8 @@ export class AuthService {
       },
     });
 
-    const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+    const { frontendUrl, appName } = getMailerConfig();
+    const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
 
     try {
       await this.emailService.sendTemplatedEmail(
@@ -241,9 +246,12 @@ export class AuthService {
         {
           email: user.email,
           firstName: user.firstName || 'User',
+          lastName: user.lastName || '',
           resetUrl,
           expiryHours: 1,
+          platformName: appName,
         },
+        { metadata: getDefaultEmailMetadata() },
       );
     } catch (error) {
       this.logger.error('Failed to send password reset email:', error);
@@ -288,7 +296,7 @@ export class AuthService {
     });
 
     try {
-      // Using your exact pattern from the shared project
+      const { frontendUrl, appName } = getMailerConfig();
       await this.emailService.sendTemplatedEmail(
         user.email,
         'AUTH',
@@ -296,9 +304,13 @@ export class AuthService {
         {
           email: user.email,
           firstName: user.firstName || 'User',
+          lastName: user.lastName || '',
           changedAt: new Date().toLocaleString(),
-          loginUrl: `${process.env.FRONTEND_URL}/login`,
+          loginUrl: `${frontendUrl}/login`,
+          supportUrl: `${frontendUrl}/contact`,
+          platformName: appName,
         },
+        { metadata: getDefaultEmailMetadata() },
       );
     } catch (error) {
       this.logger.error(
@@ -327,7 +339,8 @@ export class AuthService {
       data: { emailVerificationToken: hashedToken },
     });
 
-    const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
+    const { frontendUrl, appName } = getMailerConfig();
+    const verificationUrl = `${frontendUrl}/verify-email?token=${verificationToken}`;
 
     try {
       await this.emailService.sendTemplatedEmail(
@@ -337,8 +350,11 @@ export class AuthService {
         {
           email: user.email,
           firstName: user.firstName || 'User',
+          lastName: user.lastName || '',
           verificationUrl,
+          platformName: appName,
         },
+        { metadata: getDefaultEmailMetadata() },
       );
     } catch (error) {
       this.logger.error('Failed to send verification email:', error);

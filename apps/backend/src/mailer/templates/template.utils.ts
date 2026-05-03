@@ -1,11 +1,13 @@
-// Get platform name with environment variable fallback
+import { getMailerConfig } from '../mailer.config';
+
+// Get platform name (per-email override or central mailer config)
 export function getPlatformName(data: { platformName?: string }): string {
-  return data.platformName || process.env.PLATFORM_NAME || 'EVO TRANSPORT';
+  return data.platformName || getMailerConfig().appName;
 }
 
-// Get brand color with environment variable fallback
+// Brand color from mailer config
 export function getBrandColor(): string {
-  return process.env.BRAND_COLOR || '#078ece';
+  return getMailerConfig().brandColor;
 }
 
 export const formatCurrency = (amount: number, currency: string): string => {
