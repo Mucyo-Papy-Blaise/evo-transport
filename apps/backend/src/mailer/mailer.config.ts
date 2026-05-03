@@ -2,7 +2,6 @@ import type { EmailMetadata } from './types/mailer';
 
 export interface SmtpConfig {
   host: string;
-  port: number;
   secure: boolean;
   auth: {
     user: string;
@@ -60,7 +59,6 @@ export function getMailerConfig(): MailerConfig {
   return {
     smtp: {
       host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: parseInt(process.env.SMTP_PORT || '587', 10),
       secure: process.env.SMTP_SECURE === 'true',
       auth: {
         user: process.env.SMTP_USER || '',

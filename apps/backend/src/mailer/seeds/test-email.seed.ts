@@ -3,7 +3,6 @@ import { AppModule } from 'src/app.module';
 import { MailerService } from '../mailer.service';
 import { getDefaultEmailMetadata, getMailerConfig } from '../mailer.config';
 
-
 async function quickTest() {
   console.log('🚀 Quick Email Test Starting...\n');
 
@@ -51,17 +50,18 @@ async function quickTest() {
     } else {
       console.log('❌ FAILED! Email could not be sent');
       console.log('💡 Check your .env configuration:');
-      console.log('   - SMTP_HOST, SMTP_PORT, SMTP_SECURE');
       console.log('   - SMTP_USER, SMTP_PASS');
       console.log('   - SMTP_FROM_EMAIL, SMTP_FROM_NAME');
-      console.log('   - FRONTEND_URL, ADMIN_URL (optional), SUPPORT_EMAIL (optional)');
+      console.log(
+        '   - FRONTEND_URL, ADMIN_URL (optional), SUPPORT_EMAIL (optional)',
+      );
     }
 
     // Show recent logs
     const logs = mailerService.getRecentLogs(1);
-    if (logs.length > 0 && logs[0]!.error) {
+    if (logs.length > 0 && logs[0].error) {
       console.log('\n❌ Error Details:');
-      console.log(`   ${logs[0]!.error}`);
+      console.log(`   ${logs[0].error}`);
     }
   } catch (error) {
     console.error('\n❌ TEST FAILED WITH ERROR:');
