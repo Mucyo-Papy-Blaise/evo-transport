@@ -1,4 +1,5 @@
 import { EmailMetadata } from '../types/mailer';
+import { getMailerConfig } from '../mailer.config';
 
 //  Base template configuration
 interface BaseTemplateConfig {
@@ -8,19 +9,21 @@ interface BaseTemplateConfig {
   brandColor: string;
 }
 
-//   Default configuration for
-const DEFAULT_CONFIG: BaseTemplateConfig = {
-  platformName: process.env.PLATFORM_NAME || 'EVO TRANSPORT',
-  platformIcon:
-    process.env.PLATFORM_LOGO_URL ||
-    'https://via.placeholder.com/40x40.png?text=E-Learn',
-  platformUrl: process.env.PLATFORM_URL || 'https://elearning.example.com',
-  brandColor: process.env.BRAND_COLOR || '#078ece',
-};
+function getBaseTemplateConfig(): BaseTemplateConfig {
+  const c = getMailerConfig();
+  return {
+    platformName: c.appName,
+    platformIcon:
+      c.platformLogoUrl ||
+      'https://via.placeholder.com/40x40.png?text=EVO',
+    platformUrl: c.frontendUrl,
+    brandColor: c.brandColor,
+  };
+}
 
 // Generates the email header with platform/workspace branding
 export function generateEmailHeader(metadata?: EmailMetadata): string {
-  const config = { ...DEFAULT_CONFIG };
+  const config = { ...getBaseTemplateConfig() };
 
   const displayName =
     metadata?.workspaceName || metadata?.platformName || config.platformName;
@@ -65,7 +68,7 @@ export function generateEmailHeader(metadata?: EmailMetadata): string {
 
 // Generates the email footer
 export function generateEmailFooter(metadata?: EmailMetadata): string {
-  const config = { ...DEFAULT_CONFIG };
+  const config = { ...getBaseTemplateConfig() };
   const platformName = metadata?.platformName || config.platformName;
   const platformUrl = metadata?.platformUrl || config.platformUrl;
   const currentYear = new Date().getFullYear();
@@ -111,7 +114,7 @@ export function wrapEmailContent(
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <meta http-equiv="X-UA-Compatible" content="IE=edge">
-      <title>Email from ${metadata?.platformName || DEFAULT_CONFIG.platformName}</title>
+      <title>Email from ${metadata?.platformName || getBaseTemplateConfig().platformName}</title>
     </head>
     <body style='
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -156,7 +159,7 @@ export function createButton(
     padding?: string;
   },
 ): string {
-  const bgColor = options?.backgroundColor || DEFAULT_CONFIG.brandColor;
+  const bgColor = options?.backgroundColor || getBaseTemplateConfig().brandColor;
   const color = options?.color || '#ffffff';
   const padding = options?.padding || '12px 24px';
 
@@ -197,7 +200,7 @@ export function createInfoBox(
       padding: 20px;
       margin: 20px 0;
       border-radius: 6px;
-      border-left: 4px solid ${DEFAULT_CONFIG.brandColor};
+      border-left: 4px solid ${getBaseTemplateConfig().brandColor};
     ">
       ${options?.icon ? `<div style="margin-bottom: 12px;">${options.icon}</div>` : ''}
       ${content}
@@ -224,12 +227,12 @@ export function createHighlightBox(
   return `
     <div style="
       background: linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%);
-      border: 2px solid ${DEFAULT_CONFIG.brandColor};
+      border: 2px solid ${getBaseTemplateConfig().brandColor};
       padding: 16px;
       margin: 16px 0;
       border-radius: 8px;
     ">
-      <h4 style="margin: 0 0 12px 0; color: ${DEFAULT_CONFIG.brandColor}; font-size: 16px;">
+      <h4 style="margin: 0 0 12px 0; color: ${getBaseTemplateConfig().brandColor}; font-size: 16px;">
         ${title}
       </h4>
       <table style="width: 100%; border-collapse: collapse;">
@@ -251,10 +254,10 @@ export function createCodeDisplay(
       text-align: center;
       margin: 16px 0;
       border-radius: 8px;
-      border: 2px dashed ${DEFAULT_CONFIG.brandColor};
+      border: 2px dashed ${getBaseTemplateConfig().brandColor};
     ">
       <h2 style="
-        color: ${DEFAULT_CONFIG.brandColor};
+        color: ${getBaseTemplateConfig().brandColor};
         letter-spacing: 8px;
         margin: 0;
         font-size: 36px;

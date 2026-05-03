@@ -3,7 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { MailerService } from './mailer.service';
 import { TemplateService } from './templates/template.service';
 
-// Email via Resend HTTP API (free tier, no SMTP delay)
+// Transactional email via SMTP (see `mailer.config.ts` + `MailerService`)
 @Module({
   imports: [ConfigModule],
   providers: [MailerService, TemplateService],

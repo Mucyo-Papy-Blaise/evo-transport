@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from 'src/app.module';
 import { MailerService } from '../mailer.service';
+import { getDefaultEmailMetadata, getMailerConfig } from '../mailer.config';
 
 
 async function quickTest() {
@@ -19,18 +20,20 @@ async function quickTest() {
     console.log(`📧 Sending test email to: ${testEmail}\n`);
 
     // Send a simple test email
+    const { frontendUrl, appName } = getMailerConfig();
+
     const result = await mailerService.sendTemplatedEmail(
       testEmail,
       'AUTH',
       'WELCOME_NEW_USER',
       {
-        firstName: 'Test',
-        lastName: 'User',
+        fullName: 'Test User',
         email: testEmail,
         tempPassword: 'TestPassword@123',
-        loginUrl: 'https://example.com/login',
-        platformName: 'Email Test Platform',
+        loginUrl: `${frontendUrl}/login`,
+        platformName: appName,
       },
+      { metadata: getDefaultEmailMetadata() },
     );
 
     // Wait a moment for the email to process
@@ -48,11 +51,10 @@ async function quickTest() {
     } else {
       console.log('❌ FAILED! Email could not be sent');
       console.log('💡 Check your .env configuration:');
-      console.log('   - MAIL_HOST');
-      console.log('   - MAIL_PORT');
-      console.log('   - MAIL_USER');
-      console.log('   - MAIL_PASSWORD');
-      console.log('   - MAIL_FROM_ADDRESS');
+      console.log('   - SMTP_HOST, SMTP_PORT, SMTP_SECURE');
+      console.log('   - SMTP_USER, SMTP_PASS');
+      console.log('   - SMTP_FROM_EMAIL, SMTP_FROM_NAME');
+      console.log('   - FRONTEND_URL, ADMIN_URL (optional), SUPPORT_EMAIL (optional)');
     }
 
     // Show recent logs

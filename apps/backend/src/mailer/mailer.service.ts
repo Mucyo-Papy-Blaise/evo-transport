@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Resend } from 'resend';
+import * as nodemailer from 'nodemailer';
+import type { Transporter } from 'nodemailer';
 import {
   MailerOptions,
   EmailLog,
@@ -9,8 +10,9 @@ import {
   TemplateCategory,
 } from './types/mailer';
 import { TemplateService } from './templates/template.service';
+import { getMailerConfig } from './mailer.config';
 
-// Handles email sending via Resend HTTP API (faster than SMTP)
+// Handles email sending via SMTP (TUMA-style configuration)
 @Injectable()
 export class MailerService {
   private readonly logger = new Logger(MailerService.name);
@@ -20,23 +22,35 @@ export class MailerService {
   private readonly RETRY_DELAYS = [10000, 30000, 60000]; // 10s, 30s, 60s
   private emailQueue: Array<() => Promise<void>> = [];
   private isProcessingQueue = false;
-  private readonly resend: Resend;
+  private readonly transporter: Transporter;
   private readonly from: string;
 
   constructor(
     private readonly configService: ConfigService,
     private readonly templateService: TemplateService,
   ) {
-    const apiKey = this.configService.getOrThrow<string>('RESEND_API_KEY');
-    this.resend = new Resend(apiKey);
-    const fromName = this.configService.get<string>(
-      'MAIL_FROM_NAME',
-      'ECO TRANSPORT',
-    );
-    const fromAddress = this.configService.get<string>('MAIL_FROM_ADDRESS');
-    this.from = fromAddress
-      ? `${fromName} <${fromAddress}>`
-      : `${fromName} <onboarding@resend.dev>`;
+    // Keep ConfigService injected for module consistency and future overrides.
+    void this.configService;
+    const mailConfig = getMailerConfig();
+    this.from = `"${mailConfig.smtp.from.name}" <${mailConfig.smtp.from.email}>`;
+    this.transporter = nodemailer.createTransport({
+      host: mailConfig.smtp.host,
+      port: mailConfig.smtp.port,
+      secure: mailConfig.smtp.secure,
+      auth: mailConfig.smtp.auth,
+    });
+    void this.verifyConnection();
+  }
+
+  private async verifyConnection(): Promise<void> {
+    try {
+      await this.transporter.verify();
+      this.logger.log('SMTP connection verified');
+    } catch (error) {
+      this.logger.error('SMTP connection failed', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   // Send email using predefined template
@@ -325,7 +339,7 @@ export class MailerService {
     }
   }
 
-  // Send email via Resend HTTP API with retry
+  // Send email via SMTP with retry
   private async sendMailWithRetry(
     options: MailerOptions,
     maxRetries: number,
@@ -335,11 +349,24 @@ export class MailerService {
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
-        const payload: Parameters<Resend['emails']['send']>[0] = {
+        const payload: {
+          from: string;
+          to: string[];
+          subject: string;
+          html: string;
+          text: string;
+          attachments?: Array<{
+            filename: string;
+            content: Buffer;
+            contentType?: string;
+            cid?: string;
+          }>;
+        } = {
           from: this.from,
           to,
           subject: options.subject,
           html: options.html ?? '',
+          text: this.htmlToText(options.html ?? ''),
         };
         if (options.attachments?.length) {
           payload.attachments = options.attachments.map((a) => ({
@@ -348,10 +375,11 @@ export class MailerService {
               typeof a.content === 'string'
                 ? Buffer.from(a.content)
                 : a.content,
+            contentType: a.contentType,
+            cid: a.cid,
           }));
         }
-        const { error } = await this.resend.emails.send(payload);
-        if (error) throw new Error(error.message);
+        await this.transporter.sendMail(payload);
 
         this.logEmail({
           success: true,
@@ -413,6 +441,15 @@ export class MailerService {
     });
 
     return false;
+  }
+
+  private htmlToText(html: string): string {
+    return html
+      .replace(/<style[^>]*>.*?<\/style>/gis, '')
+      .replace(/<script[^>]*>.*?<\/script>/gis, '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   // Check if error is retryable

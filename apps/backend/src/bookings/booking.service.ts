@@ -15,6 +15,10 @@ import {
   MessageSenderType,
 } from '@prisma/client';
 import { MailerService } from 'src/mailer/mailer.service';
+import {
+  getDefaultEmailMetadata,
+  getMailerConfig,
+} from 'src/mailer/mailer.config';
 import { NotificationService } from '../notifications/notification.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
@@ -201,7 +205,9 @@ export class BookingService {
   private async sendNewBookingEmails(booking: any) {
     const name = this.customerName(booking);
     const email = this.customerEmail(booking);
-    const adminUrl = `${process.env.ADMIN_URL}/bookings/${booking.id}`;
+    const { adminUrl: adminBase, supportEmail, appName } = getMailerConfig();
+    const adminUrl = `${adminBase}/bookings/${booking.id}`;
+    const emailMeta = { metadata: getDefaultEmailMetadata() };
 
     // Customer confirmation
     if (email) {
@@ -227,7 +233,10 @@ export class BookingService {
           currency: booking.currency,
           tripType: booking.tripType,
           status: 'PENDING',
+          platformName: appName,
+          supportEmail,
         },
+        emailMeta,
       );
 
       await this.notificationService.create({
@@ -267,7 +276,9 @@ export class BookingService {
           currency: booking.currency,
           createdAt: format(booking.createdAt, 'PPP pp'),
           adminUrl,
+          platformName: appName,
         },
+        emailMeta,
       );
 
       await this.notificationService.create({
@@ -357,8 +368,11 @@ export class BookingService {
       },
     });
 
-    const adminResponseUrl = `${process.env.ADMIN_URL}/bookings/${pendingBooking.id}/respond`;
+    const { adminUrl: adminBase, frontendUrl, supportEmail, appName } =
+      getMailerConfig();
+    const adminResponseUrl = `${adminBase}/bookings/${pendingBooking.id}/respond`;
     const admins = await this.getActiveAdmins();
+    const emailMeta = { metadata: getDefaultEmailMetadata() };
 
     for (const admin of admins) {
       await this.emailService.sendTemplatedEmail(
@@ -395,7 +409,9 @@ export class BookingService {
           message: dto.message || 'No special requests',
           adminResponseUrl,
           requestedAt: format(new Date(), 'PPP pp'),
+          platformName: appName,
         },
+        emailMeta,
       );
 
       await this.notificationService.create({
@@ -413,8 +429,8 @@ export class BookingService {
 
     // Customer confirmation
     const dashboardUrl = userId
-      ? `${process.env.FRONTEND_URL}/dashboard/bookings`
-      : `${process.env.FRONTEND_URL}/booking/lookup`;
+      ? `${frontendUrl}/dashboard/bookings`
+      : `${frontendUrl}/booking/lookup`;
 
     await this.emailService.sendTemplatedEmail(
       customerEmail,
@@ -428,11 +444,13 @@ export class BookingService {
         fromCode: dto.fromCode || dto.fromLocation,
         toCode: dto.toCode || dto.toLocation,
         distance,
-        supportEmail: process.env.SUPPORT_EMAIL || 'support@evotransport.rw',
+        supportEmail,
         responseTime: '24 hours',
         dashboardUrl,
         userType: userId ? 'registered' : 'guest',
+        platformName: appName,
       },
+      emailMeta,
     );
 
     return {
@@ -503,9 +521,11 @@ export class BookingService {
     if (!email) return;
 
     const name = this.customerName(booking);
+    const { frontendUrl, supportEmail, appName } = getMailerConfig();
+    const emailMeta = { metadata: getDefaultEmailMetadata() };
     const dashboardUrl = booking.userId
-      ? `${process.env.FRONTEND_URL}/dashboard/bookings/${booking.id}`
-      : `${process.env.FRONTEND_URL}/booking/lookup?ref=${booking.bookingReference}`;
+      ? `${frontendUrl}/dashboard/bookings/${booking.id}`
+      : `${frontendUrl}/booking/lookup?ref=${booking.bookingReference}`;
 
     const templateMap: Record<string, string> = {
       [BookingStatus.CONFIRMED]: 'BOOKING_CONFIRMED',
@@ -528,9 +548,10 @@ export class BookingService {
       returnTime: booking.returnTime,
       reason,
       status,
-      supportEmail: process.env.SUPPORT_EMAIL || 'support@evotransport.rw',
+      supportEmail,
       dashboardUrl,
       cancelledBy: 'ADMIN' as const,
+      platformName: appName,
     };
 
     await this.emailService.sendTemplatedEmail(
@@ -538,6 +559,7 @@ export class BookingService {
       'BOOKING',
       templateKey as any,
       baseData,
+      emailMeta,
     );
 
     await this.notificationService.create({
@@ -594,10 +616,12 @@ export class BookingService {
     const name = this.customerName(booking);
 
     if (email) {
+      const { frontendUrl, appName } = getMailerConfig();
+      const emailMeta = { metadata: getDefaultEmailMetadata() };
       const isGuest = !booking.userId;
       const replyUrl = isGuest
-        ? `${process.env.FRONTEND_URL}/booking/reply?token=${message.guestReplyToken}`
-        : `${process.env.FRONTEND_URL}/dashboard/bookings/${bookingId}`;
+        ? `${frontendUrl}/booking/reply?token=${message.guestReplyToken}`
+        : `${frontendUrl}/dashboard/bookings/${bookingId}`;
 
       await this.emailService.sendTemplatedEmail(
         email,
@@ -612,7 +636,9 @@ export class BookingService {
           messageContent: dto.content,
           replyUrl,
           isGuest,
+          platformName: appName,
         },
+        emailMeta,
       );
 
       // In-app notification for registered users
@@ -757,6 +783,8 @@ export class BookingService {
     content: string,
   ) {
     const admins = await this.getActiveAdmins();
+    const { adminUrl: adminBase, appName } = getMailerConfig();
+    const emailMeta = { metadata: getDefaultEmailMetadata() };
     for (const admin of admins) {
       await this.emailService.sendTemplatedEmail(
         admin.email,
@@ -771,8 +799,10 @@ export class BookingService {
           toLocation: booking.toLocation,
           senderType: booking.userId ? 'CUSTOMER' : 'GUEST',
           messageContent: content,
-          adminUrl: `${process.env.ADMIN_URL}/bookings/${booking.id}`,
+          adminUrl: `${adminBase}/bookings/${booking.id}`,
+          platformName: appName,
         },
+        emailMeta,
       );
 
       await this.notificationService.create({

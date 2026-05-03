@@ -9,6 +9,7 @@ import {
   getBrandColor,
   formatCurrency,
 } from './template.utils';
+import { getMailerConfig } from '../mailer.config';
 
 const BRAND_COLOR = getBrandColor();
 
@@ -32,7 +33,9 @@ export const BOOKING_TEMPLATES = {
     tripType: string;
     status: string;
     platformName?: string;
+    supportEmail?: string;
   }): string => {
+    const support = data.supportEmail ?? getMailerConfig().supportEmail;
     const routeDisplay =
       data.fromCode && data.toCode
         ? `${data.fromCode} → ${data.toCode}`
@@ -94,7 +97,7 @@ export const BOOKING_TEMPLATES = {
         <p style="margin-top: 24px;">Safe travels!<br><strong>The ${getPlatformName(data)} Team</strong></p>
         <hr style="margin: 24px 0; border: none; border-top: 1px solid #E5E7EB;" />
         <p style="font-size: 12px; color: #9CA3AF; text-align: center;">
-          Booking Reference: ${data.bookingReference} | For assistance: support@evotransport.rw
+          Booking Reference: ${data.bookingReference} | For assistance: ${support}
         </p>
       </div>
     `;
@@ -337,11 +340,6 @@ export const BOOKING_TEMPLATES = {
         })}
         <div style="background-color:#F8FAFC;border-left:4px solid ${BRAND_COLOR};padding:20px;margin:24px 0;border-radius:0 8px 8px 0;">
           <p style="margin:0;color:#1F2937;font-style:italic;line-height:1.6;">"${data.messageContent}"</p>
-        </div>
-        <div style="text-align:center;margin:32px 0;">
-          <a href="${data.replyUrl}" style="display:inline-block;background-color:${BRAND_COLOR};color:white;padding:14px 28px;text-decoration:none;border-radius:8px;font-weight:600;font-size:16px;">
-            ${data.isGuest ? 'Reply to this Message' : 'View & Reply in Dashboard'}
-          </a>
         </div>
         ${
           data.isGuest
