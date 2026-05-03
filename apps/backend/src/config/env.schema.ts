@@ -19,7 +19,6 @@ export const configValidationSchema = Joi.object({
   ADMIN_URL: Joi.string().uri().optional(),
   SUPPORT_EMAIL: Joi.string().email().optional(),
   SMTP_HOST: Joi.string().optional(),
-  SMTP_SECURE: Joi.string().valid('true', 'false').optional(),
   SMTP_USER: Joi.string().optional(),
   SMTP_PASS: Joi.string().optional(),
   SMTP_FROM_EMAIL: Joi.string().email().optional(),

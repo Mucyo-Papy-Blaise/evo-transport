@@ -35,7 +35,6 @@ export class MailerService {
     this.from = `"${mailConfig.smtp.from.name}" <${mailConfig.smtp.from.email}>`;
     this.transporter = nodemailer.createTransport({
       host: mailConfig.smtp.host,
-      secure: mailConfig.smtp.secure,
       auth: mailConfig.smtp.auth,
     });
     void this.verifyConnection();
