@@ -60,6 +60,7 @@ import {
   LongDistanceBookingContext,
   LongDistanceRequestModal,
 } from "@/components/booking/Longdistancerequestmodal";
+import { Header } from "@/components/landing/Header";
 
 interface SelectedRouteStored {
   fromLocation: string;
@@ -71,6 +72,9 @@ interface SelectedRouteStored {
   distance?: number;
   shuttle: SearchResult;
 }
+
+const MAX_TOTAL_PASSENGERS = 80;
+const MIN_ADULTS = 1;
 
 const ALL_DAY_HOURS = Array.from({ length: 24 }, (_, i) =>
   `${String(i).padStart(2, "0")}:00`,
@@ -138,7 +142,7 @@ function BookingPageInner() {
         distance: distance ? Number(distance) : 0,
         shuttle: {
           id: "map-booking",
-          provider: "EVO Transport",
+          provider: "ECO Transport",
           vehicleType: "Shuttle",
           departureTime: "09:00",
           arrivalTime: "",
@@ -180,6 +184,16 @@ function BookingPageInner() {
   }, [router, searchParams]);
 
   const totalPassengers = adults + children;
+  useEffect(() => {
+    if (totalPassengers > MAX_TOTAL_PASSENGERS) {
+      const allowedChildren = Math.max(0, MAX_TOTAL_PASSENGERS - adults);
+      setChildren(allowedChildren);
+    }
+    if (adults < MIN_ADULTS) {
+      setAdults(MIN_ADULTS);
+    }
+  }, [adults, children, totalPassengers]);
+
   const clampedWheelchair = Math.min(wheelchairCount, totalPassengers);
   const passengerDetails = buildPassengerDetails({
     adults,
@@ -233,6 +247,13 @@ function BookingPageInner() {
     if (!selectedRoute) return;
     if (totalPassengers < 1) {
       toast.error("Add at least one passenger", "");
+      return;
+    }
+    if (totalPassengers > MAX_TOTAL_PASSENGERS) {
+      toast.error(
+        "Passenger limit reached",
+        `You can book up to ${MAX_TOTAL_PASSENGERS} passengers per request.`,
+      );
       return;
     }
     if (!validateContact()) return;
@@ -301,7 +322,8 @@ function BookingPageInner() {
   return (
     <>
       <div className="min-h-screen bg-muted/30 py-12">
-        <div className="container max-w-6xl mx-auto px-4">
+      <Header />
+        <div className="container max-w-6xl mx-auto px-4 py-20">
           <Link
             href="/"
             className="inline-flex items-center text-muted-foreground hover:text-foreground mb-6 transition-colors"
@@ -711,7 +733,10 @@ function BookingPageInner() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+                            {Array.from(
+                              { length: MAX_TOTAL_PASSENGERS - MIN_ADULTS + 1 },
+                              (_, i) => MIN_ADULTS + i,
+                            ).map((n) => (
                               <SelectItem key={n} value={n.toString()}>
                                 {n}
                               </SelectItem>
@@ -731,7 +756,13 @@ function BookingPageInner() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {[0, 1, 2, 3, 4, 5].map((n) => (
+                            {Array.from(
+                              {
+                                length:
+                                  Math.max(0, MAX_TOTAL_PASSENGERS - adults) + 1,
+                              },
+                              (_, i) => i,
+                            ).map((n) => (
                               <SelectItem key={n} value={n.toString()}>
                                 {n}
                               </SelectItem>
@@ -821,6 +852,9 @@ function BookingPageInner() {
                           ` (${clampedWheelchair} wheelchair)`}
                       </span>
                     </div>
+                    <p className="text-xs text-muted-foreground">
+                      Max {MAX_TOTAL_PASSENGERS} passengers per booking request.
+                    </p>
                     {routeDistance > 0 && (
                       <div className="flex items-center gap-2">
                         <MapPin className="h-4 w-4 text-primary" />

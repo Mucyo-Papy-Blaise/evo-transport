@@ -75,22 +75,19 @@ export default function ForgotPasswordPage() {
       <div className="relative z-10 hidden md:flex flex-col justify-end flex-1 h-screen p-12 pb-16">
         <span className="inline-flex items-center gap-2 mb-6">
           <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center">
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="white"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-              <polyline points="9 22 9 12 15 12 15 22" />
-            </svg>
+            <Link href="/" className="relative shrink-0 group">
+              <Image
+                src="/eco-logo-nobg.png"
+                alt="EVO Transport"
+                width={72}
+                height={36}
+                className="object-contain transition-transform duration-300 group-hover:scale-105"
+                priority
+              />
+            </Link>
           </div>
-          <span className="text-white font-semibold text-lg tracking-wide">
-            YourBrand
+          <span className="text-accent-foreground- font-semibold text-lg tracking-wide">
+            ECO-TRANSPORT
           </span>
         </span>
 
@@ -116,21 +113,18 @@ export default function ForgotPasswordPage() {
           {/* Mobile logo */}
           <div className="flex items-center gap-2 mb-8 md:hidden">
             <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="white"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                <polyline points="9 22 9 12 15 12 15 22" />
-              </svg>
+              <Link href="/" className="relative shrink-0 group">
+                <Image
+                  src="/eco-logo-nobg.png"
+                  alt="EVO Transport"
+                  width={72}
+                  height={36}
+                  className="object-contain transition-transform duration-300 group-hover:scale-105"
+                  priority
+                />
+              </Link>
             </div>
-            <span className="font-semibold text-secondary">YourBrand</span>
+            <span className="font-semibold text-secondary">ECO-TRANSPORT</span>
           </div>
           {children}
         </div>
@@ -155,8 +149,8 @@ export default function ForgotPasswordPage() {
               Check your email
             </h2>
             <p className="text-muted-foreground text-sm leading-relaxed max-w-sm">
-              We&apos;ve sent a password reset link to your email address. Please
-              check your inbox and follow the instructions.
+              We&apos;ve sent a password reset link to your email address.
+              Please check your inbox and follow the instructions.
             </p>
           </div>
 

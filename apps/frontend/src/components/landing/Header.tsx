@@ -10,11 +10,8 @@ import {
   X,
   ChevronDown,
   LayoutDashboard,
-  User,
   LogOut,
-  Home,
   Map,
-  HelpCircle,
   Navigation,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth/auth-context";
@@ -22,14 +19,7 @@ import { UserRole } from "@/types/enum";
 import Image from "next/image";
 
 const NAV_LINKS = [
-  { href: "/", label: "Home", id: "home", icon: Home },
   { href: "#map-booking", label: "Map", id: "map-booking", icon: Map },
-  {
-    href: "#why-choose-us",
-    label: "Why Us",
-    id: "why-choose-us",
-    icon: HelpCircle,
-  },
   {
     href: "#track-booking",
     label: "Track Booking",
@@ -54,7 +44,7 @@ export function Header() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // ── Active section via IntersectionObserver ──────────────────────────────
+  // ── Active section via IntersectionObserver 
   useEffect(() => {
     const sections = NAV_LINKS.map((l) => l.id).filter((id) => id !== "home");
     const observers: IntersectionObserver[] = [];
@@ -125,7 +115,7 @@ export function Header() {
           "fixed top-0 left-0 right-0 z-50 transition-all duration-500 py-5",
           scrolled
             ? "bg-primary backdrop-blur-xl shadow-sm border-b border-border py-1 md:py-5"
-            : "bg-transparent",
+            : "bg-primary backdrop-blur-xl shadow-sm border-b border-border py-1 md:py-5",
         )}
       >
         <div className={`mx-auto max-w-7xl ${containerPadding.default}`}>

@@ -33,6 +33,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
+import { useAuth } from "@/lib/auth/auth-context";
 
 // Hooks
 import { useBookingByReference } from "@/hooks/useBooking";
@@ -41,6 +42,7 @@ export default function BookingSuccessContent() {
   const searchParams = useSearchParams();
   const bookingRef = searchParams.get("ref");
   const [isPrinting, setIsPrinting] = useState(false);
+  const { user } = useAuth();
 
   const {
     data: booking,
@@ -378,6 +380,20 @@ Thank you for choosing EVO Transport!
             </CardContent>
 
             <CardFooter className="bg-muted/50 border-t border-border p-6 flex flex-col sm:flex-row gap-4 justify-between print:hidden">
+              {user ? (
+                <Link href="/dashboard/bookings" className="w-full sm:w-auto">
+                  <Button className="w-full">
+                    View in Dashboard
+                  </Button>
+                </Link>
+              ) : (
+                <Link
+                  href={`/booking/lookup${bookingRef ? `?ref=${bookingRef}` : ""}`}
+                  className="w-full sm:w-auto"
+                >
+                  <Button className="w-full">Track Booking</Button>
+                </Link>
+              )}
               <Link href="/" className="w-full sm:w-auto">
                 <Button variant="outline" className="w-full">
                   <ArrowLeftIcon className="mr-2 h-4 w-4" />
