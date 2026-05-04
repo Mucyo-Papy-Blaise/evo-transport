@@ -315,10 +315,6 @@ export function LocationSearchInput({
               className="px-4 py-4 space-y-3 border-t border-border/60"
               onMouseDown={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-foreground">
-                <PenLine className="h-3.5 w-3.5 shrink-0" />
-                Enter address manually
-              </div>
               <Textarea
                 value={manualAddress}
                 onChange={(e) => setManualAddress(e.target.value)}
@@ -438,17 +434,6 @@ export function LocationSearchInput({
                 className="sticky bottom-0 px-4 py-1 rounded-2xl border-t border-border/60 bg-primary cursor-pointer backdrop-blur-sm"
                 onMouseDown={(e) => e.stopPropagation()}
               >
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="w-full gap-2 bg-primary rounded-full"
-                  disabled={disabled}
-                  onClick={openManualPanel}
-                >
-                  <PenLine className="h-3.5 w-3.5" />
-                  Enter address manually
-                </Button>
                 {!process.env.NEXT_PUBLIC_MAPBOX_TOKEN && (
                   <p className="mt-2 text-xs text-center text-muted-foreground">
                     Mapbox token is not configured — use the map to drop a pin

@@ -29,7 +29,6 @@ function seasonLabel(season: string) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-// ─── Step indicator ───────────────────────────────────────────────────────────
 function Step({
   num,
   label,
@@ -95,7 +94,8 @@ export function MapBookingSection() {
 
   const bothSelected = !!(from && to);
   const hasManualEntry = from?.kind === "manual" || to?.kind === "manual";
-  const canContinueBooking = bothSelected && !isLoading && (hasManualEntry || !!routeInfo);
+  const canContinueBooking =
+    bothSelected && !isLoading && (hasManualEntry || !!routeInfo);
   const currentStep = !from ? 1 : !to ? 2 : 3;
 
   const handleBookNow = useCallback(() => {
@@ -168,7 +168,9 @@ export function MapBookingSection() {
           <p className="mt-2 text-sm text-muted-foreground max-w-md">
             Pin pickup and drop-off on the map, or search airports, stations,
             and cities. If nothing matches, use{" "}
-            <span className="text-foreground font-medium">Enter address manually</span>{" "}
+            <span className="text-foreground font-medium">
+              Enter address manually
+            </span>{" "}
             to type a full address and continue to booking.
           </p>
 
@@ -392,7 +394,9 @@ export function MapBookingSection() {
                                   <div
                                     className={cn(
                                       "text-sm font-bold leading-tight",
-                                      accent ? "text-primary" : "text-foreground",
+                                      accent
+                                        ? "text-primary"
+                                        : "text-foreground",
                                     )}
                                   >
                                     {value}
@@ -419,8 +423,8 @@ export function MapBookingSection() {
                           </div>
                         ) : hasManualEntry ? (
                           <div className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5 text-xs text-foreground">
-                            Manual location captured. Route distance and price will be
-                            confirmed after booking request review.
+                            Manual location captured. Route distance and price
+                            will be confirmed after booking request review.
                           </div>
                         ) : error ? (
                           <p
@@ -473,7 +477,7 @@ export function MapBookingSection() {
 
             {/* ── RIGHT: Map — overflow hidden only here so canvas respects rounded corners ── */}
             <div
-              className="flex-1 relative min-h-[280px] overflow-hidden rounded-b-2xl lg:rounded-b-none lg:rounded-r-2xl z-0"
+              className="flex-1 relative min-h-70 overflow-hidden rounded-b-2xl lg:rounded-b-none lg:rounded-r-2xl z-0"
               style={{ height: MAP_BOOKING_PANEL_HEIGHT_PX }}
             >
               {/* Map label badges */}

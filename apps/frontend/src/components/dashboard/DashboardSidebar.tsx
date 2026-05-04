@@ -59,8 +59,8 @@ function SidebarContent({
             <polyline points="9 22 9 12 15 12 15 22" />
           </svg>
         </div>
-        <span className="font-bold text-lg text-secondary tracking-tight">
-          YourBrand
+        <span className="font-bold text-lg text-primary tracking-tight">
+          ECO-TRANSPORT
         </span>
       </div>
 
